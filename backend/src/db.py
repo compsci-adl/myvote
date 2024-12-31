@@ -1,8 +1,8 @@
 from typing import Any, AsyncGenerator
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from .config import config
 
+from .config import config
 
 # the db engine used for transactions
 engine = create_async_engine(config.db_url, echo=True, future=True)

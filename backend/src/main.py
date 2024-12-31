@@ -1,7 +1,8 @@
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
-from app.routers import candidates
+from src.routers import candidates
 
 
 @asynccontextmanager

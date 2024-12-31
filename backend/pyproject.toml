@@ -1,0 +1,24 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = "API for managing the voting process for student society elections"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+dependencies = [
+    "aiosqlite>=0.20.0",
+    "alembic>=1.14.0",
+    "fastapi[standard]>=0.115.6",
+    "greenlet>=3.1.1",
+    "pydantic>=2.10.4",
+    "sqlalchemy>=2.0.36",
+    "sqlmodel>=0.0.22",
+]
+
+[tool.ruff]
+lint.select = ['E', 'F', 'W', 'A', 'PLC', 'PLE', 'PLW', 'I']
+lint.ignore = ["E501"]
+lint.fixable = ["ALL"]
+
+[dependency-groups]
+dev = ["pre-commit>=4.0.1", "ruff>=0.7.3"]

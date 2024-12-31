@@ -4,7 +4,7 @@ import asyncio
 import time
 from typing import Any, AsyncGenerator
 
-from app.config import config
+from src.config import config
 
 # January 1, 2024 00:00:00 GMT
 epoch = 1704067200000

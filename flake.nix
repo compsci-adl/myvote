@@ -17,15 +17,16 @@
         pkgs = import nixpkgs {inherit system;};
         # Python package dependencies
         pyPackages = with pkgs.python312Packages; [
-            sqlmodel
-            alembic
-            aiosqlite
+            # sqlmodel
+            # alembic
+            # aiosqlite
             #pyjwt
             #argon2-cffi
             #jinja2
-            python-multipart
-            uvicorn
-            fastapi
+            uv
+            # python-multipart
+            # uvicorn
+            # fastapi
           ];
           pyDeps = with pkgs; [
             python312

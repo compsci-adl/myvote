@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from sqlmodel import Field, SQLModel
 from enum import Enum
+
+from sqlmodel import Field, SQLModel
 
 
 class ElectionStatus(Enum):
