@@ -20,5 +20,8 @@ lint.select = ['E', 'F', 'W', 'A', 'PLC', 'PLE', 'PLW', 'I']
 lint.ignore = ["E501"]
 lint.fixable = ["ALL"]
 
+[tool.ruff.lint.per-file-ignores]
+"migrations/*" = ["D"]
+
 [dependency-groups]
 dev = ["pre-commit>=4.0.1", "ruff>=0.7.3", "pytest>=8.3.4"]
