@@ -5,9 +5,14 @@
 The backend is using FastAPI and uv. You can install with
 
 ```sh
-cd backend
-make deps
-make dev
+uv sync
+pre-commit install
+```
+
+You can run the backend with
+
+```sh
+uv run fastapi dev src/main.py
 ```
 
 ## Frontend setup
