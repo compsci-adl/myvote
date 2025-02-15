@@ -1,5 +1,5 @@
 # MyVote
-MyVote is the CS Club's voting system.
+The Computer Science Club's voting system.
 
 ## Getting Started
 ### Backend
