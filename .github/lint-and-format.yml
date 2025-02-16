@@ -1,0 +1,14 @@
+name: Linting and Formatting Checks
+on:
+  pull_request_target:
+    branches:
+      - main
+
+jobs:
+  frontend:
+    name: Frontend Linting and Formatting Checks
+    uses: ./.github/workflows/frontend.yml
+
+  backend:
+    name: Backend Linting and Formatting Checks
+    uses: ./.github/workflows/backend.yml
