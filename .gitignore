@@ -186,5 +186,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+.vscode/
 
 .ruff_cache
