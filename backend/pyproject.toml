@@ -10,6 +10,7 @@ dependencies = [
     "alembic>=1.14.0",
     "fastapi[standard]>=0.115.6",
     "greenlet>=3.1.1",
+    "pre-commit>=4.1.0",
     "pydantic>=2.10.4",
     "sqlalchemy>=2.0.36",
     "sqlmodel>=0.0.22",

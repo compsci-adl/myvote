@@ -9,7 +9,7 @@ The backend is using FastAPI and uv. You can install with
 ```sh
 cd backend
 uv sync
-pre-commit install
+uv run pre-commit install
 ```
 
 You can run the backend with
