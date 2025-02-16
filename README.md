@@ -2,6 +2,7 @@
 The Computer Science Club's voting system.
 
 ## Getting Started
+
 ### Backend
 
 The backend is using FastAPI and uv. You can install with
