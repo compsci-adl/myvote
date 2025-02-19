@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from sqlmodel import SQLModel
 
 from src.db import engine
-from src.routers import positions
+from src.routers import candidates, elections, positions
 
 
 @asynccontextmanager
@@ -29,3 +29,5 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Votes API", lifespan=lifespan)
 
 app.include_router(positions.router)
+app.include_router(candidates.router)
+app.include_router(elections.router)
