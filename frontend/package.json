@@ -8,12 +8,12 @@
 		"build": "tsc -b && vite build",
 		"lint": "eslint ./src",
 		"preview": "vite preview",
-		"format": "prettier --write \"**/*.{js,ts,tsx,css,md,cjs,mjs,json,html}\"",
+		"format": "prettier --write \"**/*.{js,jsx,ts,tsx,css,json,mjs,cjs,yml,yaml}\"",
 		"format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,css,json,mjs,cjs,yml,yaml}\""
 	},
 	"dependencies": {
 		"@atlaskit/pragmatic-drag-and-drop": "^1.4.0",
-		"@nextui-org/react": "^2.4.8",
+		"@heroui/react": "2.7.2",
 		"clsx": "^2.1.1",
 		"framer-motion": "^11.11.9",
 		"ky": "^1.7.2",

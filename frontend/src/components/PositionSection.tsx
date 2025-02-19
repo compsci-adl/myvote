@@ -1,4 +1,4 @@
-import { Button, Card, CardBody, CardFooter, Divider } from '@nextui-org/react';
+import { Button, Card, CardBody, CardFooter, Divider } from '@heroui/react';
 import clsx from 'clsx';
 import { motion } from 'framer-motion';
 import { useState, useRef, memo } from 'react';
