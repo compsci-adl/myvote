@@ -1,14 +1,18 @@
 import { Button, Input, DatePicker } from '@heroui/react';
-import { now, getLocalTimeZone, ZonedDateTime } from '@internationalized/date';
+import { now, getLocalTimeZone } from '@internationalized/date';
+import type { ZonedDateTime } from '@internationalized/date';
 import { useState } from 'react';
+import useSWRMutation from 'swr/mutation';
 import { z } from 'zod';
 
+import { fetcher } from '../lib/fetcher';
+
 export const electionSchema = z.object({
-	electionName: z.string().min(1),
-	nominationStartDate: z.date(),
-	nominationEndDate: z.date(),
-	votingStartDate: z.date(),
-	votingEndDate: z.date(),
+	name: z.string().min(1),
+	nomination_start: z.date(),
+	nomination_end: z.date(),
+	voting_start: z.date(),
+	voting_end: z.date(),
 });
 
 export const ElectionSetup = () => {
@@ -17,14 +21,25 @@ export const ElectionSetup = () => {
 		now(getLocalTimeZone()),
 	);
 	const [nominationEndDate, setNominationEndDate] = useState(
-		now(getLocalTimeZone()),
+		now(getLocalTimeZone()).add({ weeks: 1 }),
 	);
 	const [votingStartDate, setVotingStartDate] = useState(
-		now(getLocalTimeZone()),
+		now(getLocalTimeZone()).add({ days: 10 }),
 	);
-	const [votingEndDate, setVotingEndDate] = useState(now(getLocalTimeZone()));
+	const [votingEndDate, setVotingEndDate] = useState(
+		now(getLocalTimeZone()).add({ days: 10, hours: 2 }),
+	);
 
 	const [errors, setErrors] = useState<{ electionName?: string }>({});
+
+	const save = useSWRMutation('elections', fetcher.post.mutate, {
+		onError: () => {
+			console.error('Failed to create election');
+		},
+		onSuccess: () => {
+			console.log('Election created successfully');
+		},
+	});
 
 	const handleSubmit = () => {
 		const formatDate = (date: ZonedDateTime) => {
@@ -39,11 +54,12 @@ export const ElectionSetup = () => {
 		};
 
 		const data = {
-			electionName,
-			nominationStartDate: formatDate(nominationStartDate),
-			nominationEndDate: formatDate(nominationEndDate),
-			votingStartDate: formatDate(votingStartDate),
-			votingEndDate: formatDate(votingEndDate),
+			name: electionName,
+			nomination_start: formatDate(nominationStartDate),
+			nomination_end: formatDate(nominationEndDate),
+			voting_start: formatDate(votingStartDate),
+			voting_end: formatDate(votingEndDate),
+			status: 0,
 		};
 
 		const result = electionSchema.safeParse(data);
@@ -51,12 +67,11 @@ export const ElectionSetup = () => {
 		if (!result.success) {
 			const fieldErrors = result.error.format();
 			setErrors({
-				electionName: fieldErrors.electionName?._errors[0],
+				electionName: fieldErrors.name?._errors[0],
 			});
 			return;
 		}
-
-		console.log('Election Setup data:', data);
+		save.trigger(data);
 	};
 
 	return (
