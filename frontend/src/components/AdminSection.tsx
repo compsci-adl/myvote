@@ -11,6 +11,7 @@ import {
 import { useRef, useState } from 'react';
 
 import { setRefs } from '../constants/refs';
+import { ElectionSetup } from './ElectionSetup';
 
 export const AdminSection = () => {
 	const r = useRef(new Map());
@@ -79,20 +80,26 @@ export const AdminSection = () => {
 				<div className="flex justify-center gap-4">
 					<Button
 						color="primary"
-						onClick={handlePreviousStage}
+						onPress={handlePreviousStage}
 						isDisabled={sliderValue === 0}
 					>
 						Previous Stage
 					</Button>
 					<Button
 						color="primary"
-						onClick={handleNextStage}
+						onPress={handleNextStage}
 						isDisabled={sliderValue === 4}
 					>
 						Next Stage
 					</Button>
 				</div>
 			</div>
+
+			{sliderValue === 0 && <ElectionSetup></ElectionSetup>}
+			{sliderValue === 1 && <div>Positions Setup Content</div>}
+			{sliderValue === 2 && <div>Candidates Setup Content</div>}
+			{sliderValue === 3 && <div>Start Voting Content</div>}
+			{sliderValue === 4 && <div>Finish Voting Content</div>}
 			<Modal isOpen={isOpen} onOpenChange={onOpenChange}>
 				<ModalContent>
 					{() => (
