@@ -1,12 +1,10 @@
+import os
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
 
 from fastapi import FastAPI
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
+from sqlmodel import SQLModel
 
 from src.db import engine
-from src.models import Election, ElectionStatus
 from src.routers import positions
 
 
@@ -16,24 +14,12 @@ async def lifespan(app: FastAPI):
 
     # Code here is executed before app started, we can set things up or whatever
 
-    # TEMP: Create the election
-    async with AsyncSession(engine) as session:
-        election = await session.execute(select(Election))
-        election = election.scalars().first()
-        if election is None:
-            n = datetime.now(timezone.utc)
-            election = Election(
-                id=0,
-                name="Test Election",
-                nomination_end=n,
-                nomination_start=n,
-                voting_end=n,
-                voting_start=n,
-                status=ElectionStatus.PreRelease,
-            )
-            session.add(election)
-            await session.commit()
-
+    # Check if the database file exists
+    db_path = "database.db"
+    if not os.path.exists(db_path):
+        # Create the database and tables
+        async with engine.begin() as conn:
+            await conn.run_sync(SQLModel.metadata.create_all)
     yield
 
     # Code here is executed when the app is dying, use to clean things up
