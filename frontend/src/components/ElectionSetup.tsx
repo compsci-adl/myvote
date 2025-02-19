@@ -30,14 +30,24 @@ export const ElectionSetup = () => {
 		now(getLocalTimeZone()).add({ days: 10, hours: 2 }),
 	);
 
-	const [errors, setErrors] = useState<{ electionName?: string }>({});
+	const [errors, setErrors] = useState<{
+		electionName?: string;
+		nominationStartDate?: string;
+		nominationEndDate?: string;
+		votingStartDate?: string;
+		votingEndDate?: string;
+	}>({});
 
+	const [status, setStatus] = useState({ text: '', type: '' });
 	const save = useSWRMutation('elections', fetcher.post.mutate, {
 		onError: () => {
-			console.error('Failed to create election');
+			setStatus({
+				text: 'Failed to create election. Please try again.',
+				type: 'error',
+			});
 		},
 		onSuccess: () => {
-			console.log('Election created successfully');
+			setStatus({ text: 'Election created successfully!', type: 'success' });
 		},
 	});
 
@@ -65,13 +75,43 @@ export const ElectionSetup = () => {
 		const result = electionSchema.safeParse(data);
 
 		if (!result.success) {
-			const fieldErrors = result.error.format();
 			setErrors({
-				electionName: fieldErrors.name?._errors[0],
+				electionName: "Election name can't be empty",
 			});
 			return;
 		}
-		save.trigger(data);
+
+		if (nominationStartDate.compare(now(getLocalTimeZone())) <= 0) {
+			setErrors({
+				nominationStartDate: 'Nomination start date must be in the future',
+			});
+			return;
+		}
+
+		if (nominationEndDate.compare(nominationStartDate) <= 0) {
+			setErrors({
+				nominationEndDate:
+					'Nomination end date must be after nomination start date',
+			});
+			return;
+		}
+
+		if (votingStartDate.compare(nominationEndDate) <= 0) {
+			setErrors({
+				votingStartDate: 'Voting start date must be after nomination end date',
+			});
+			return;
+		}
+
+		if (votingEndDate.compare(votingStartDate) <= 0) {
+			setErrors({
+				votingEndDate: 'Voting end date must be after voting start date',
+			});
+			return;
+		}
+		if (Object.keys(errors).length > 0) {
+			save.trigger(data);
+		}
 	};
 
 	return (
@@ -102,6 +142,8 @@ export const ElectionSetup = () => {
 						defaultValue={nominationStartDate}
 						label="Nomination Start Date"
 						onChange={(date) => date && setNominationStartDate(date)}
+						errorMessage={errors.nominationStartDate}
+						isInvalid={!!errors.nominationStartDate}
 					/>
 					<DatePicker
 						hideTimeZone
@@ -109,6 +151,8 @@ export const ElectionSetup = () => {
 						defaultValue={nominationEndDate}
 						label="Nomination End Date"
 						onChange={(date) => date && setNominationEndDate(date)}
+						errorMessage={errors.nominationEndDate}
+						isInvalid={!!errors.nominationEndDate}
 					/>
 				</div>
 				<div className="flex w-full items-end gap-3">
@@ -118,6 +162,8 @@ export const ElectionSetup = () => {
 						defaultValue={votingStartDate}
 						label="Voting Start Date"
 						onChange={(date) => date && setVotingStartDate(date)}
+						errorMessage={errors.votingStartDate}
+						isInvalid={!!errors.votingStartDate}
 					/>
 					<DatePicker
 						hideTimeZone
@@ -125,6 +171,8 @@ export const ElectionSetup = () => {
 						defaultValue={votingEndDate}
 						label="Voting End Date"
 						onChange={(date) => date && setVotingEndDate(date)}
+						errorMessage={errors.votingEndDate}
+						isInvalid={!!errors.votingEndDate}
 					/>
 				</div>
 				<div className="flex justify-center">
@@ -132,6 +180,13 @@ export const ElectionSetup = () => {
 						Create Election
 					</Button>
 				</div>
+				{status.text && (
+					<div
+						className={`mt-4 text-center ${status.type === 'error' ? 'text-red-500' : 'text-green-500'}`}
+					>
+						{status.text}
+					</div>
+				)}
 			</div>
 		</div>
 	);
