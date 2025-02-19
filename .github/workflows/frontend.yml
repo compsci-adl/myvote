@@ -1,4 +1,4 @@
-name: Frontend Linting and Formatting Checks
+name: Frontend Checks
 on:
   workflow_call:
 
