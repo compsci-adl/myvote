@@ -1,4 +1,4 @@
-import { NextUIProvider } from '@nextui-org/react';
+import { HeroUIProvider } from '@heroui/react';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ErrorBoundary } from 'react-error-boundary';
@@ -16,9 +16,9 @@ if (import.meta.env.DEV) {
 createRoot(document.getElementById('root')!).render(
 	<StrictMode>
 		<ErrorBoundary FallbackComponent={Error}>
-			<NextUIProvider>
+			<HeroUIProvider>
 				<App />
-			</NextUIProvider>
+			</HeroUIProvider>
 		</ErrorBoundary>
 	</StrictMode>,
 );

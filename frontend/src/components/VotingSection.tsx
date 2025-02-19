@@ -7,7 +7,7 @@ import {
 	useDisclosure,
 	ModalContent,
 	ModalFooter,
-} from '@nextui-org/react';
+} from '@heroui/react';
 
 import { positions } from '../data/positions';
 import { PositionSection } from './PositionSection';

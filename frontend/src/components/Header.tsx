@@ -6,7 +6,7 @@ import {
 	NavbarContent,
 	NavbarItem,
 	Tooltip,
-} from '@nextui-org/react';
+} from '@heroui/react';
 import clsx from 'clsx';
 
 import { useFocusedUsers, useSelectedTab } from '../stores';

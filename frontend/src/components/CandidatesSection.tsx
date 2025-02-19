@@ -1,4 +1,4 @@
-import { Accordion, AccordionItem } from '@nextui-org/react';
+import { Accordion, AccordionItem } from '@heroui/react';
 import { useRef } from 'react';
 
 import { setRefs } from '../constants/refs';
