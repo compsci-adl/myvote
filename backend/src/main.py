@@ -20,7 +20,6 @@ async def lifespan(app: FastAPI):
         # Create the database and tables
         async with engine.begin() as conn:
             await conn.run_sync(SQLModel.metadata.create_all)
-
     yield
 
     # Code here is executed when the app is dying, use to clean things up
