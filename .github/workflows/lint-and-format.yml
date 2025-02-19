@@ -6,9 +6,9 @@ on:
 
 jobs:
   frontend:
-    name: Frontend Linting and Formatting Checks
+    name: Frontend Checks
     uses: ./.github/workflows/frontend.yml
 
   backend:
-    name: Backend Linting and Formatting Checks
+    name: Backend Checks
     uses: ./.github/workflows/backend.yml

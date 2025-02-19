@@ -1,4 +1,4 @@
-name: Backend Linting and Formatting Checks
+name: Backend Checks
 on:
   workflow_call:
 
