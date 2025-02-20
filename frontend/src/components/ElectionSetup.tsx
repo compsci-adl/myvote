@@ -1,4 +1,4 @@
-import { Button, Input, DatePicker } from '@heroui/react';
+import { Button, Input, DatePicker, Checkbox } from '@heroui/react';
 import { now, getLocalTimeZone } from '@internationalized/date';
 import type { ZonedDateTime } from '@internationalized/date';
 import { useState } from 'react';
@@ -38,6 +38,15 @@ export const ElectionSetup = () => {
 		votingEndDate?: string;
 	}>({});
 
+	const [positions, setPositions] = useState<
+		{
+			name: string;
+			vacancies: number;
+			description: string;
+			executive: boolean;
+		}[]
+	>([{ name: '', vacancies: 1, description: '', executive: false }]);
+
 	const [status, setStatus] = useState({ text: '', type: '' });
 	const save = useSWRMutation('elections', fetcher.post.mutate, {
 		onError: () => {
@@ -50,6 +59,35 @@ export const ElectionSetup = () => {
 			setStatus({ text: 'Election created successfully!', type: 'success' });
 		},
 	});
+
+	const addPosition = () => {
+		setPositions([
+			...positions,
+			{ name: '', vacancies: 1, description: '', executive: false },
+		]);
+	};
+
+	const updatePosition = (
+		index: number,
+		updatedPosition: {
+			name: string;
+			vacancies: number;
+			description: string;
+			executive: boolean;
+		},
+	) => {
+		setPositions((prevPositions) =>
+			prevPositions.map((position, i) =>
+				i === index ? updatedPosition : position,
+			),
+		);
+	};
+
+	const removePosition = (index: number) => {
+		setPositions((prevPositions) =>
+			prevPositions.filter((_, i) => i !== index),
+		);
+	};
 
 	const handleSubmit = () => {
 		const formatDate = (date: ZonedDateTime) => {
@@ -123,7 +161,8 @@ export const ElectionSetup = () => {
 				</span>
 				<div className="flex-grow border-t border-gray-400"></div>
 			</div>
-			<div className="space-y-4">
+			<h2 className="mb-4 text-lg font-semibold">Election Info</h2>
+			<div className="flex flex-col gap-4">
 				<div className="flex flex-col gap-2">
 					<Input
 						label="Election Name"
@@ -175,19 +214,88 @@ export const ElectionSetup = () => {
 						isInvalid={!!errors.votingEndDate}
 					/>
 				</div>
-				<div className="flex justify-center">
-					<Button color="primary" className="mt-4" onClick={handleSubmit}>
-						Create Election
-					</Button>
-				</div>
-				{status.text && (
-					<div
-						className={`mt-4 text-center ${status.type === 'error' ? 'text-red-500' : 'text-green-500'}`}
-					>
-						{status.text}
-					</div>
-				)}
 			</div>
+			<div className="h-4"></div>
+			<div className="mb-4 flex items-center justify-between">
+				<h2 className="text-lg font-semibold">Positions</h2>
+				<Button color="primary" onPress={addPosition}>
+					<span className="mr-0.5 text-2xl">+</span> Add Position
+				</Button>
+			</div>
+			{positions.map((position, index) => (
+				<div
+					key={index}
+					className="flex flex-col gap-4 rounded-xl bg-gray-200 p-4"
+				>
+					<Input
+						label="Position Name"
+						placeholder="Enter position name"
+						type="text"
+						value={position.name}
+						onChange={(e) =>
+							updatePosition(index, { ...position, name: e.target.value })
+						}
+					/>
+					<Input
+						label="Description"
+						placeholder="Enter position description"
+						type="text"
+						value={position.description}
+						onChange={(e) =>
+							updatePosition(index, {
+								...position,
+								description: e.target.value,
+							})
+						}
+					/>
+					<div className="flex items-center gap-2 md:gap-6">
+						<Input
+							label="Vacancies"
+							placeholder="Enter number of vacancies"
+							type="number"
+							value={position.vacancies.toString()}
+							min={1}
+							onChange={(e) =>
+								updatePosition(index, {
+									...position,
+									vacancies: parseInt(e.target.value),
+								})
+							}
+							className="w-1/3 md:w-full"
+						/>
+						<Checkbox
+							checked={position.executive}
+							onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+								updatePosition(index, {
+									...position,
+									executive: e.target.checked,
+								})
+							}
+						>
+							Executive
+						</Checkbox>
+						<Button
+							color="secondary"
+							onPress={() => removePosition(index)}
+							className="w-[40%] md:w-1/6"
+						>
+							<span className="mr-0.5 text-2xl">-</span> Remove Position
+						</Button>
+					</div>
+				</div>
+			))}
+			<div className="flex justify-center">
+				<Button color="primary" className="mt-4" onPress={handleSubmit}>
+					Create Election
+				</Button>
+			</div>
+			{status.text && (
+				<div
+					className={`mt-4 text-center ${status.type === 'error' ? 'text-red-500' : 'text-green-500'}`}
+				>
+					{status.text}
+				</div>
+			)}
 		</div>
 	);
 };
