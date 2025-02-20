@@ -27,7 +27,8 @@ export default {
 			themes: {
 				light: {
 					colors: {
-						primary: { DEFAULT: '#FC8500', foreground: '#000000' },
+                        primary: { DEFAULT: '#FC8500', foreground: '#000000' },
+                        secondary: { DEFAULT: '#75A7F8', foreground: '#000000' },
 						'apple-gray': { 300: '#DFDFDF', 500: '#AFAFAF', 700: '#6b6b6b' },
 						// Calendar Event Colors
 						// 300 - bg, 500 - border, 700 - text
