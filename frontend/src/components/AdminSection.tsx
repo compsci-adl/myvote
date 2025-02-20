@@ -65,14 +65,15 @@ export const AdminSection = () => {
 					value={sliderValue}
 					defaultValue={0}
 					minValue={0}
-					maxValue={4}
+					maxValue={5}
 					step={1}
 					marks={[
 						{ value: 0, label: 'Election Setup' },
-						{ value: 1, label: 'Positions Setup' },
-						{ value: 2, label: 'Candidates Setup' },
-						{ value: 3, label: 'Start Voting' },
-						{ value: 4, label: 'Finish Voting' },
+						{ value: 1, label: 'Nominations Opened' },
+						{ value: 2, label: 'Nominations Closed' },
+						{ value: 3, label: 'Voting Opened' },
+						{ value: 4, label: 'Voting Closed' },
+						{ value: 5, label: 'Results Released' },
 					]}
 					hideThumb={true}
 					className="mx-auto mb-16 w-[50rem]"
@@ -96,10 +97,11 @@ export const AdminSection = () => {
 			</div>
 
 			{sliderValue === 0 && <ElectionSetup></ElectionSetup>}
-			{sliderValue === 1 && <div>Positions Setup Content</div>}
-			{sliderValue === 2 && <div>Candidates Setup Content</div>}
-			{sliderValue === 3 && <div>Start Voting Content</div>}
-			{sliderValue === 4 && <div>Finish Voting Content</div>}
+			{sliderValue === 1 && <div>Nominations Opened Content</div>}
+			{sliderValue === 2 && <div>Nominations Closed Content</div>}
+			{sliderValue === 3 && <div>Voting Opened Content</div>}
+			{sliderValue === 4 && <div>Voting Closed Content</div>}
+			{sliderValue === 5 && <div>Results Released Content</div>}
 			<Modal isOpen={isOpen} onOpenChange={onOpenChange}>
 				<ModalContent>
 					{() => (
