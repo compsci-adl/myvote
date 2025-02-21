@@ -52,7 +52,7 @@ export const AdminSection = () => {
 	};
 
 	return (
-		<div>
+		<div className="mx-2">
 			<div className="relative flex items-center py-5">
 				<div className="flex-grow border-t border-gray-400"></div>
 				<span className="mx-4 flex-shrink text-lg font-bold">
@@ -76,8 +76,26 @@ export const AdminSection = () => {
 						{ value: 5, label: 'Results Released' },
 					]}
 					hideThumb={true}
-					className="mx-auto mb-16 w-[50rem]"
+					className="mx-auto mb-16 hidden w-[50rem] md:block"
 				/>
+				<div className="mb-6 block text-center md:hidden">
+					<h2 className="text-md font-semibold">
+						Current Stage:{' '}
+						<span className="text-primary">
+							{
+								[
+									'Election Setup',
+									'Nominations Opened',
+									'Nominations Closed',
+									'Voting Opened',
+									'Voting Closed',
+									'Results Released',
+								][sliderValue]
+							}
+						</span>
+					</h2>
+				</div>
+
 				<div className="flex justify-center gap-4">
 					<Button
 						color="primary"

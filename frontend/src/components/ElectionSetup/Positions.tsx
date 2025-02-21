@@ -70,7 +70,7 @@ export default function Positions({
 							errorMessage={positionErrors.description}
 							isInvalid={!!positionErrors.description}
 						/>
-						<div className="flex items-center gap-2 md:gap-6">
+						<div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-6">
 							<Input
 								label="Vacancies"
 								placeholder="Enter number of vacancies"
@@ -83,29 +83,31 @@ export default function Positions({
 										vacancies: parseInt(e.target.value),
 									})
 								}
-								className="w-1/3 md:w-full"
+								className="w-full md:w-3/5"
 								errorMessage={positionErrors.vacancies}
 								isInvalid={!!positionErrors.vacancies}
 							/>
-							<Checkbox
-								checked={position.executive}
-								onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-									updatePosition(index, {
-										...position,
-										executive: e.target.checked,
-									})
-								}
-							>
-								Executive
-							</Checkbox>
-							<Button
-								color="secondary"
-								onPress={() => removePosition(index)}
-								className="w-[40%] md:w-1/6"
-								isDisabled={positions.length === 1}
-							>
-								<span className="mr-0.5 text-2xl">-</span> Remove Position
-							</Button>
+							<div className="flex w-full items-center gap-4 md:w-2/5">
+								<Checkbox
+									checked={position.executive}
+									onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+										updatePosition(index, {
+											...position,
+											executive: e.target.checked,
+										})
+									}
+								>
+									Executive
+								</Checkbox>
+								<Button
+									color="secondary"
+									onPress={() => removePosition(index)}
+									className="w-full"
+									isDisabled={positions.length === 1}
+								>
+									<span className="mr-0.5 text-2xl">-</span> Remove Position
+								</Button>
+							</div>
 						</div>
 					</div>
 				);
