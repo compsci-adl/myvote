@@ -7,7 +7,7 @@ import useSWRMutation from 'swr/mutation';
 import { fetcher } from '../../lib/fetcher';
 import ElectionInfo from './ElectionInfo';
 import Positions from './Positions';
-import { electionSchema } from './schema';
+import { electionSchema } from './schemas';
 
 export const ElectionSetup = () => {
 	const [electionName, setElectionName] = useState('');
@@ -30,6 +30,15 @@ export const ElectionSetup = () => {
 		nominationEndDate?: string;
 		votingStartDate?: string;
 		votingEndDate?: string;
+		positions?: Record<
+			number,
+			{
+				name?: string;
+				description?: string;
+				vacancies?: string;
+				executive?: string;
+			}
+		>;
 	}>({});
 
 	const [positions, setPositions] = useState<
@@ -101,49 +110,66 @@ export const ElectionSetup = () => {
 			nomination_end: formatDate(nominationEndDate),
 			voting_start: formatDate(votingStartDate),
 			voting_end: formatDate(votingEndDate),
-			status: 0,
+			positions,
 		};
 
 		const result = electionSchema.safeParse(data);
 
 		if (!result.success) {
-			setErrors({
-				electionName: "Election name can't be empty",
+			const zodErrors: typeof errors = {};
+			result.error.errors.forEach((err) => {
+				const [first, index, field] = err.path;
+				if (first === 'positions' && typeof index === 'number' && field) {
+					zodErrors.positions = zodErrors.positions || {};
+					zodErrors.positions[index] = zodErrors.positions[index] || {};
+					zodErrors.positions[index][
+						field as keyof (typeof zodErrors.positions)[number]
+					] = err.message;
+				} else {
+					zodErrors[first as keyof typeof zodErrors] = err.message;
+				}
 			});
+
+			// Check if election name is empty
+			if (!data.name) {
+				zodErrors.electionName = 'Election name is required';
+			}
+
+			setErrors(zodErrors);
 			return;
 		}
 
+		// Check logical constraints for dates
+		const logicalErrors: typeof errors = {};
+
 		if (nominationStartDate.compare(now(getLocalTimeZone())) <= 0) {
-			setErrors({
-				nominationStartDate: 'Nomination start date must be in the future',
-			});
-			return;
+			logicalErrors.nominationStartDate =
+				'Nomination start date must be in the future';
 		}
 
 		if (nominationEndDate.compare(nominationStartDate) <= 0) {
-			setErrors({
-				nominationEndDate:
-					'Nomination end date must be after nomination start date',
-			});
-			return;
+			logicalErrors.nominationEndDate =
+				'Nomination end date must be after nomination start date';
 		}
 
 		if (votingStartDate.compare(nominationEndDate) <= 0) {
-			setErrors({
-				votingStartDate: 'Voting start date must be after nomination end date',
-			});
-			return;
+			logicalErrors.votingStartDate =
+				'Voting start date must be after nomination end date';
 		}
 
 		if (votingEndDate.compare(votingStartDate) <= 0) {
-			setErrors({
-				votingEndDate: 'Voting end date must be after voting start date',
-			});
+			logicalErrors.votingEndDate =
+				'Voting end date must be after voting start date';
+		}
+
+		// If any logical errors exist, set them and return
+		if (Object.keys(logicalErrors).length > 0) {
+			setErrors(logicalErrors);
 			return;
 		}
-		if (Object.keys(errors).length > 0) {
-			save.trigger(data);
-		}
+
+		// Trigger save if validation passes
+		save.trigger(data);
 	};
 
 	return (
@@ -175,6 +201,7 @@ export const ElectionSetup = () => {
 				positions={positions}
 				updatePosition={updatePosition}
 				removePosition={removePosition}
+				errors={errors.positions}
 			/>
 			<div className="flex justify-center">
 				<Button color="primary" className="mt-4" onPress={handleSubmit}>

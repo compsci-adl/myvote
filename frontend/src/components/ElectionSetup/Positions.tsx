@@ -12,6 +12,15 @@ interface PositionsProps {
 	positions: Position[];
 	updatePosition: (index: number, updatedPosition: Position) => void;
 	removePosition: (index: number) => void;
+	errors?: Record<
+		number,
+		{
+			name?: string;
+			description?: string;
+			vacancies?: string;
+			executive?: string;
+		}
+	>;
 }
 
 export default function Positions({
@@ -19,6 +28,7 @@ export default function Positions({
 	positions,
 	updatePosition,
 	removePosition,
+	errors = {},
 }: PositionsProps) {
 	return (
 		<div>
@@ -28,68 +38,78 @@ export default function Positions({
 					<span className="mr-0.5 text-2xl">+</span> Add Position
 				</Button>
 			</div>
-			{positions.map((position, index) => (
-				<div
-					key={index}
-					className="flex flex-col gap-4 rounded-xl bg-gray-200 p-4"
-				>
-					<Input
-						label="Position Name"
-						placeholder="Enter position name"
-						type="text"
-						value={position.name}
-						onChange={(e) =>
-							updatePosition(index, { ...position, name: e.target.value })
-						}
-					/>
-					<Input
-						label="Description"
-						placeholder="Enter position description"
-						type="text"
-						value={position.description}
-						onChange={(e) =>
-							updatePosition(index, {
-								...position,
-								description: e.target.value,
-							})
-						}
-					/>
-					<div className="flex items-center gap-2 md:gap-6">
+			{positions.map((position, index) => {
+				const positionErrors = errors[index] || {};
+				return (
+					<div
+						key={index}
+						className="flex flex-col gap-4 rounded-xl bg-gray-200 p-4"
+					>
 						<Input
-							label="Vacancies"
-							placeholder="Enter number of vacancies"
-							type="number"
-							value={position.vacancies.toString()}
-							min={1}
+							label="Position Name"
+							placeholder="Enter position name"
+							type="text"
+							value={position.name}
+							onChange={(e) =>
+								updatePosition(index, { ...position, name: e.target.value })
+							}
+							errorMessage={positionErrors.name}
+							isInvalid={!!positionErrors.name}
+						/>
+						<Input
+							label="Description"
+							placeholder="Enter position description"
+							type="text"
+							value={position.description}
 							onChange={(e) =>
 								updatePosition(index, {
 									...position,
-									vacancies: parseInt(e.target.value),
+									description: e.target.value,
 								})
 							}
-							className="w-1/3 md:w-full"
+							errorMessage={positionErrors.description}
+							isInvalid={!!positionErrors.description}
 						/>
-						<Checkbox
-							checked={position.executive}
-							onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-								updatePosition(index, {
-									...position,
-									executive: e.target.checked,
-								})
-							}
-						>
-							Executive
-						</Checkbox>
-						<Button
-							color="secondary"
-							onPress={() => removePosition(index)}
-							className="w-[40%] md:w-1/6"
-						>
-							<span className="mr-0.5 text-2xl">-</span> Remove Position
-						</Button>
+						<div className="flex items-center gap-2 md:gap-6">
+							<Input
+								label="Vacancies"
+								placeholder="Enter number of vacancies"
+								type="number"
+								value={position.vacancies.toString()}
+								min={1}
+								onChange={(e) =>
+									updatePosition(index, {
+										...position,
+										vacancies: parseInt(e.target.value),
+									})
+								}
+								className="w-1/3 md:w-full"
+								errorMessage={positionErrors.vacancies}
+								isInvalid={!!positionErrors.vacancies}
+							/>
+							<Checkbox
+								checked={position.executive}
+								onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+									updatePosition(index, {
+										...position,
+										executive: e.target.checked,
+									})
+								}
+							>
+								Executive
+							</Checkbox>
+							<Button
+								color="secondary"
+								onPress={() => removePosition(index)}
+								className="w-[40%] md:w-1/6"
+								isDisabled={positions.length === 1}
+							>
+								<span className="mr-0.5 text-2xl">-</span> Remove Position
+							</Button>
+						</div>
 					</div>
-				</div>
-			))}
+				);
+			})}
 		</div>
 	);
 }
