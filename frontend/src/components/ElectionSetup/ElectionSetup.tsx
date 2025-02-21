@@ -195,7 +195,7 @@ export const ElectionSetup = () => {
 				votingEndDate={votingEndDate}
 				setVotingEndDate={setVotingEndDate}
 			/>
-			<div className="h-4"></div>
+			<div className="h-8"></div>
 			<Positions
 				addPosition={addPosition}
 				positions={positions}
