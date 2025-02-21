@@ -64,7 +64,9 @@ async def create_election(
     session.add(election)
 
     for position_req in req.positions:
-        conflict_query = select(Position).where(Position.name == position_req.name)
+        conflict_query = select(Position).where(
+            Position.name == position_req.name, Position.election_id == election.id
+        )
         conflict_result = await session.execute(conflict_query)
         conflict_result = conflict_result.scalar()
 
