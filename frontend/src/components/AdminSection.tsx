@@ -11,7 +11,7 @@ import {
 import { useRef, useState } from 'react';
 
 import { setRefs } from '../constants/refs';
-import { ElectionSetup } from './ElectionSetup';
+import { ElectionSetup } from './ElectionSetup/ElectionSetup';
 
 export const AdminSection = () => {
 	const r = useRef(new Map());
