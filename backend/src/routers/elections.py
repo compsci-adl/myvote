@@ -6,10 +6,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from src.db import get_async_session
-from src.models import Election, ElectionStatus
+from src.models import Election, ElectionStatus, Position
 from src.utils.snowflake import generate_new_id
 
 router = APIRouter(tags=["Elections"])
+
+
+class CreatePositionRequest(BaseModel):
+    name: str
+    vacancies: int
+    description: str
+    executive: bool
 
 
 class CreateElectionRequest(BaseModel):
@@ -18,7 +25,7 @@ class CreateElectionRequest(BaseModel):
     nomination_end: datetime
     voting_start: datetime
     voting_end: datetime
-    status: ElectionStatus
+    positions: list[CreatePositionRequest]
 
 
 @router.get("/elections")
@@ -52,9 +59,31 @@ async def create_election(
         nomination_end=req.nomination_end,
         voting_start=req.voting_start,
         voting_end=req.voting_end,
-        status=req.status,
+        status=ElectionStatus.PreRelease,
     )
     session.add(election)
+
+    for position_req in req.positions:
+        conflict_query = select(Position).where(Position.name == position_req.name)
+        conflict_result = await session.execute(conflict_query)
+        conflict_result = conflict_result.scalar()
+
+        if conflict_result is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Position with name {position_req.name} already exists.",
+            )
+
+        position = Position(
+            id=await generate_new_id(),
+            election_id=election.id,
+            name=position_req.name,
+            vacancies=position_req.vacancies,
+            description=position_req.description,
+            executive=position_req.executive,
+        )
+        session.add(position)
+
     await session.commit()
     await session.refresh(election)
 

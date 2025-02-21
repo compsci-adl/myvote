@@ -51,7 +51,7 @@ class Candidate(SQLModel, table=True):
 
 class Position(SQLModel, table=True):
     id: int = Field(primary_key=True)
-    election: int = Field(foreign_key="election.id")
+    election_id: int = Field(foreign_key="election.id")
     name: str
     vacancies: int
     description: str
