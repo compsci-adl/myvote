@@ -52,9 +52,13 @@ export const ElectionSetup = () => {
 
 	const [status, setStatus] = useState({ text: '', type: '' });
 	const save = useSWRMutation('elections', fetcher.post.mutate, {
-		onError: () => {
+		onError: (error) => {
+			const errorMessage =
+				error.response?.status === 409
+					? 'Election with that name already exists.'
+					: 'Failed to create election. Please try again.';
 			setStatus({
-				text: 'Failed to create election. Please try again.',
+				text: errorMessage,
 				type: 'error',
 			});
 		},
@@ -93,6 +97,7 @@ export const ElectionSetup = () => {
 	};
 
 	const handleSubmit = () => {
+		setStatus({ text: '', type: '' });
 		const formatDate = (date: ZonedDateTime) => {
 			return new Date(
 				date.year,
