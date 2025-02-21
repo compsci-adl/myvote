@@ -9,7 +9,11 @@ import ElectionInfo from './ElectionInfo';
 import Positions from './Positions';
 import { electionSchema } from './schemas';
 
-export const ElectionSetup = () => {
+export const ElectionSetup = ({
+	setSliderValue,
+}: {
+	setSliderValue: (value: number) => void;
+}) => {
 	const [electionName, setElectionName] = useState('');
 	const [nominationStartDate, setNominationStartDate] = useState(
 		now(getLocalTimeZone()),
@@ -64,6 +68,9 @@ export const ElectionSetup = () => {
 		},
 		onSuccess: () => {
 			setStatus({ text: 'Election created successfully!', type: 'success' });
+			setTimeout(() => {
+				setSliderValue(1);
+			}, 3000);
 		},
 	});
 

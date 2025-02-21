@@ -114,7 +114,7 @@ export const AdminSection = () => {
 				</div>
 			</div>
 
-			{sliderValue === 0 && <ElectionSetup></ElectionSetup>}
+			{sliderValue === 0 && <ElectionSetup setSliderValue={setSliderValue} />}
 			{sliderValue === 1 && <div>Nominations Opened Content</div>}
 			{sliderValue === 2 && <div>Nominations Closed Content</div>}
 			{sliderValue === 3 && <div>Voting Opened Content</div>}
