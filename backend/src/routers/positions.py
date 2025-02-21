@@ -17,7 +17,9 @@ async def get_positions(
 ):
     """Get all positions with vacancies in a given election."""
 
-    result = await session.execute(select(Position))
+    result = await session.execute(
+        select(Position).where(Position.election_id == election_id)
+    )
     result = result.scalars().all()
     return {"positions": result}
 
