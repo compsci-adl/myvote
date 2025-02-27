@@ -53,7 +53,7 @@ async def create_election(
         )
 
     election = Election(
-        id=await generate_new_id(),
+        id=str(await generate_new_id()),
         name=req.name,
         nomination_start=req.nomination_start,
         nomination_end=req.nomination_end,
@@ -77,7 +77,7 @@ async def create_election(
             )
 
         position = Position(
-            id=await generate_new_id(),
+            id=str(await generate_new_id()),
             election_id=election.id,
             name=position_req.name,
             vacancies=position_req.vacancies,

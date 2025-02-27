@@ -14,7 +14,7 @@ class ElectionStatus(enum.Enum):
 
 
 class Election(SQLModel, table=True):
-    id: int = Field(default=None, primary_key=True)
+    id: str = Field(default=None, primary_key=True)
     name: str
     nomination_start: datetime
     nomination_end: datetime
@@ -24,7 +24,7 @@ class Election(SQLModel, table=True):
 
 
 class Voter(SQLModel, table=True):
-    id: int = Field(primary_key=True)
+    id: str = Field(primary_key=True)
     election: int = Field(foreign_key="election.id")
     student_id: int  # The numbers only, 7 digits
     name: str
@@ -39,7 +39,7 @@ class CandidatePositionLink(SQLModel, table=True):
 # TODO: Candidates should have pictures of themselves
 # Might be a pain with file hosting and everthing, could maybe just use S3?
 class Candidate(SQLModel, table=True):
-    id: int = Field(primary_key=True)
+    id: str = Field(primary_key=True)
     election: int = Field(foreign_key="election.id")
     name: str
     statement: str | None
@@ -50,7 +50,7 @@ class Candidate(SQLModel, table=True):
 
 
 class Position(SQLModel, table=True):
-    id: int = Field(primary_key=True)
+    id: str = Field(primary_key=True)
     election_id: int = Field(foreign_key="election.id")
     name: str
     vacancies: int
@@ -62,7 +62,7 @@ class Position(SQLModel, table=True):
 
 
 class Ballot(SQLModel, table=True):
-    id: int = Field(primary_key=True)
+    id: str = Field(primary_key=True)
     voter_id: int = Field(foreign_key="voter.id")
     voter: Voter = Relationship(back_populates="votes")
     position: int = Field(foreign_key="position.id")

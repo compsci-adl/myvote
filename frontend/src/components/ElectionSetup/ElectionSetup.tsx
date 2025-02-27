@@ -9,11 +9,25 @@ import ElectionInfo from './ElectionInfo';
 import Positions from './Positions';
 import { electionSchema } from './schemas';
 
+interface ElectionSetupProps {
+	setSliderValue: (value: number) => void;
+	setSelectedElection: React.Dispatch<
+		React.SetStateAction<{
+			id: number;
+			name: string;
+			nomination_start: Date;
+			nomination_end: Date;
+			voting_start: Date;
+			voting_end: Date;
+			status: number;
+		} | null>
+	>;
+}
+
 export const ElectionSetup = ({
 	setSliderValue,
-}: {
-	setSliderValue: (value: number) => void;
-}) => {
+	setSelectedElection,
+}: ElectionSetupProps) => {
 	const [electionName, setElectionName] = useState('');
 	const [nominationStartDate, setNominationStartDate] = useState(
 		now(getLocalTimeZone()),
@@ -66,10 +80,12 @@ export const ElectionSetup = ({
 				type: 'error',
 			});
 		},
-		onSuccess: () => {
+		onSuccess: (resp) => {
 			setStatus({ text: 'Election created successfully!', type: 'success' });
+			console.log(resp);
+			setSelectedElection(resp);
 			setTimeout(() => {
-				setSliderValue(1);
+				setSliderValue(2);
 			}, 3000);
 		},
 	});

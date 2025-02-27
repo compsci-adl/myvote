@@ -11,7 +11,9 @@ import {
 import { useRef, useState } from 'react';
 
 import { setRefs } from '../constants/refs';
+import ChooseElection from './ChooseElection';
 import { ElectionSetup } from './ElectionSetup/ElectionSetup';
+import OpenNominations from './OpenNominations';
 
 export const AdminSection = () => {
 	const r = useRef(new Map());
@@ -21,6 +23,16 @@ export const AdminSection = () => {
 	const [modalMessage, setModalMessage] = useState('');
 	const [actionToConfirm, setActionToConfirm] = useState<() => void>(() => {});
 	const { isOpen, onOpen, onOpenChange } = useDisclosure();
+
+	const [selectedElection, setSelectedElection] = useState<{
+		id: number;
+		name: string;
+		nomination_start: Date;
+		nomination_end: Date;
+		voting_start: Date;
+		voting_end: Date;
+		status: number;
+	} | null>(null);
 
 	const handlePreviousStage = () => {
 		setModalMessage(
@@ -60,20 +72,22 @@ export const AdminSection = () => {
 				</span>
 				<div className="flex-grow border-t border-gray-400"></div>
 			</div>
+
 			<div>
 				<Slider
 					value={sliderValue}
 					defaultValue={0}
 					minValue={0}
-					maxValue={5}
+					maxValue={6}
 					step={1}
 					marks={[
-						{ value: 0, label: 'Election Setup' },
-						{ value: 1, label: 'Nominations Opened' },
-						{ value: 2, label: 'Nominations Closed' },
-						{ value: 3, label: 'Voting Opened' },
-						{ value: 4, label: 'Voting Closed' },
-						{ value: 5, label: 'Results Released' },
+						{ value: 0, label: 'New/Existing Election' },
+						{ value: 1, label: 'Election Setup' },
+						{ value: 2, label: 'Nominations Opened' },
+						{ value: 3, label: 'Nominations Closed' },
+						{ value: 4, label: 'Voting Opened' },
+						{ value: 5, label: 'Voting Closed' },
+						{ value: 6, label: 'Results Released' },
 					]}
 					hideThumb={true}
 					className="mx-auto mb-16 hidden w-[50rem] md:block"
@@ -113,13 +127,26 @@ export const AdminSection = () => {
 					</Button>
 				</div>
 			</div>
-
-			{sliderValue === 0 && <ElectionSetup setSliderValue={setSliderValue} />}
-			{sliderValue === 1 && <div>Nominations Opened Content</div>}
-			{sliderValue === 2 && <div>Nominations Closed Content</div>}
-			{sliderValue === 3 && <div>Voting Opened Content</div>}
-			{sliderValue === 4 && <div>Voting Closed Content</div>}
-			{sliderValue === 5 && <div>Results Released Content</div>}
+			{sliderValue === 0 && (
+				<ChooseElection
+					setSliderValue={setSliderValue}
+					selectedElection={selectedElection}
+					setSelectedElection={setSelectedElection}
+				></ChooseElection>
+			)}
+			{sliderValue === 1 && (
+				<ElectionSetup
+					setSliderValue={setSliderValue}
+					setSelectedElection={setSelectedElection}
+				/>
+			)}
+			{sliderValue === 2 && selectedElection && (
+				<OpenNominations electionId={selectedElection.id} />
+			)}
+			{sliderValue === 3 && <div>Nominations Closed Content</div>}
+			{sliderValue === 4 && <div>Voting Opened Content</div>}
+			{sliderValue === 5 && <div>Voting Closed Content</div>}
+			{sliderValue === 6 && <div>Results Released Content</div>}
 			<Modal isOpen={isOpen} onOpenChange={onOpenChange}>
 				<ModalContent>
 					{() => (
