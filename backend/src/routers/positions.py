@@ -11,7 +11,7 @@ router = APIRouter(tags=["Positions"])
 
 
 # TODO: Should only auth users be able to view these or everyone?
-@router.get("/elections/{election_id}/positions")
+@router.get("/positions/{election_id}")
 async def get_positions(
     election_id: int, session: AsyncSession = Depends(get_async_session)
 ):
@@ -32,7 +32,7 @@ class CreatePositionRequest(BaseModel):
 
 
 # TODO: Authenticated as administrator
-@router.post("/elections/{election_id}/positions")
+@router.post("/positions/{election_id}")
 async def create_position(
     election_id: int,
     req: CreatePositionRequest,
@@ -59,7 +59,7 @@ async def create_position(
 
 
 # TODO: Authenticated as administrator
-@router.delete("/elections/{election_id}/positions/{position_id}")
+@router.delete("/positions/{election_id}/{position_id}")
 async def delete_position(
     election_id: int,
     position_id: int,
@@ -88,7 +88,7 @@ class PositionPatch(BaseModel):
 
 
 # TODO: Admin auth
-@router.patch("/elections/{election_id}/positions/{position_id}")
+@router.patch("/positions/{election_id}/{position_id}")
 async def update_position(
     election_id: int,
     position_id: int,
