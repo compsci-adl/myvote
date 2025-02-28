@@ -15,6 +15,7 @@ import ChooseElection from './ChooseElection';
 import ClosedNominations from './ClosedNominations';
 import { ElectionSetup } from './ElectionSetup/ElectionSetup';
 import OpenNominations from './OpenNominations';
+import OpenVoting from './OpenVoting';
 
 export const AdminSection = () => {
 	const r = useRef(new Map());
@@ -154,7 +155,12 @@ export const AdminSection = () => {
 					electionId={selectedElection.id}
 				/>
 			)}
-			{sliderValue === 4 && <div>Open Voting Content</div>}
+			{sliderValue === 4 && selectedElection && (
+				<OpenVoting
+					setSliderValue={setSliderValue}
+					electionId={selectedElection.id}
+				/>
+			)}
 			{sliderValue === 5 && <div>Close Voting Content</div>}
 			{sliderValue === 6 && <div>Release Results Content</div>}
 			<Modal isOpen={isOpen} onOpenChange={onOpenChange}>
