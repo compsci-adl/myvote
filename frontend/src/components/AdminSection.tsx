@@ -50,7 +50,7 @@ export const AdminSection = () => {
 			'Make sure you confirm all the information you entered is correct. Do you want to proceed?',
 		);
 		setActionToConfirm(() => () => {
-			setSliderValue((prevValue) => Math.min(prevValue + 1, 4));
+			setSliderValue((prevValue) => Math.min(prevValue + 1, 6));
 		});
 		onOpen();
 	};
@@ -84,14 +84,14 @@ export const AdminSection = () => {
 					marks={[
 						{ value: 0, label: 'New/Existing Election' },
 						{ value: 1, label: 'Election Setup' },
-						{ value: 2, label: 'Nominations Opened' },
-						{ value: 3, label: 'Nominations Closed' },
-						{ value: 4, label: 'Voting Opened' },
-						{ value: 5, label: 'Voting Closed' },
-						{ value: 6, label: 'Results Released' },
+						{ value: 2, label: 'Open Nominations' },
+						{ value: 3, label: 'Close Nominations' },
+						{ value: 4, label: 'Open Voting' },
+						{ value: 5, label: 'Close Voting' },
+						{ value: 6, label: 'Release Results' },
 					]}
 					hideThumb={true}
-					className="mx-auto mb-16 hidden w-[50rem] md:block"
+					className="mx-auto mb-16 hidden w-[60rem] md:block"
 				/>
 				<div className="mb-6 block text-center md:hidden">
 					<h2 className="text-md font-semibold">
@@ -101,11 +101,11 @@ export const AdminSection = () => {
 								[
 									'New/Existing Election',
 									'Election Setup',
-									'Nominations Opened',
-									'Nominations Closed',
-									'Voting Opened',
-									'Voting Closed',
-									'Results Released',
+									'Open Nominations',
+									'Close Nominations',
+									'Open Voting',
+									'Close Voting',
+									'Release Results',
 								][sliderValue]
 							}
 						</span>
@@ -123,7 +123,7 @@ export const AdminSection = () => {
 					<Button
 						color="primary"
 						onPress={handleNextStage}
-						isDisabled={sliderValue === 4}
+						isDisabled={sliderValue === 6}
 					>
 						Next Stage
 					</Button>
@@ -154,9 +154,9 @@ export const AdminSection = () => {
 					electionId={selectedElection.id}
 				/>
 			)}
-			{sliderValue === 4 && <div>Voting Opened Content</div>}
-			{sliderValue === 5 && <div>Voting Closed Content</div>}
-			{sliderValue === 6 && <div>Results Released Content</div>}
+			{sliderValue === 4 && <div>Open Voting Content</div>}
+			{sliderValue === 5 && <div>Close Voting Content</div>}
+			{sliderValue === 6 && <div>Release Results Content</div>}
 			<Modal isOpen={isOpen} onOpenChange={onOpenChange}>
 				<ModalContent>
 					{() => (
