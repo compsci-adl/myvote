@@ -1,3 +1,4 @@
+import { Button } from '@heroui/react';
 import { useEffect, useState } from 'react';
 import useSWRMutation from 'swr/mutation';
 
@@ -5,9 +6,13 @@ import { fetcher } from '../lib/fetcher';
 
 interface OpenNominationsProps {
 	electionId: number;
+	setSliderValue: React.Dispatch<React.SetStateAction<number>>;
 }
 
-export default function OpenNominations({ electionId }: OpenNominationsProps) {
+export default function OpenNominations({
+	electionId,
+	setSliderValue,
+}: OpenNominationsProps) {
 	const [positions, setPositions] = useState<Record<
 		number,
 		{
@@ -19,7 +24,7 @@ export default function OpenNominations({ electionId }: OpenNominationsProps) {
 	> | null>(null);
 
 	const fetchedPositions = useSWRMutation(
-		`elections/${electionId}/positions`,
+		`positions/${electionId}`,
 		fetcher.get.mutate,
 		{
 			onSuccess: (data) => {
@@ -29,10 +34,42 @@ export default function OpenNominations({ electionId }: OpenNominationsProps) {
 		},
 	);
 
+	const [status, setStatus] = useState({ text: '', type: '' });
+
+	const updateElectionStatus = useSWRMutation(
+		`elections/${electionId}`,
+		(url) => fetcher.patch.mutate(url, { arg: { status: 1 } }),
+		{
+			onError: (error) => {
+				const errorMessage =
+					'Failed to update election status. Please try again.';
+				setStatus({
+					text: errorMessage,
+					type: 'error',
+				});
+			},
+			onSuccess: (data) => {
+				setStatus({
+					text: 'Election status updated successfully!',
+					type: 'success',
+				});
+				console.log('Election status updated:', data);
+				setTimeout(() => {
+					setSliderValue(3);
+				}, 3000);
+			},
+		},
+	);
+
 	useEffect(() => {
 		console.log('electionId: ', electionId);
 		fetchedPositions.trigger();
 	}, []);
+
+	const handleContinue = () => {
+		setStatus({ text: '', type: '' });
+		updateElectionStatus.trigger();
+	};
 
 	return (
 		<div className="mt-8">
@@ -68,6 +105,18 @@ export default function OpenNominations({ electionId }: OpenNominationsProps) {
 						</div>
 					))}
 			</div>
+			<div className="mt-8 flex justify-center">
+				<Button color="primary" onPress={handleContinue}>
+					Continue
+				</Button>
+			</div>
+			{status.text && (
+				<div
+					className={`mt-4 text-center ${status.type === 'error' ? 'text-red-500' : 'text-green-500'}`}
+				>
+					{status.text}
+				</div>
+			)}
 		</div>
 	);
 }

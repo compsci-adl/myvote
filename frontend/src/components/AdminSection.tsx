@@ -12,6 +12,7 @@ import { useRef, useState } from 'react';
 
 import { setRefs } from '../constants/refs';
 import ChooseElection from './ChooseElection';
+import ClosedNominations from './ClosedNominations';
 import { ElectionSetup } from './ElectionSetup/ElectionSetup';
 import OpenNominations from './OpenNominations';
 
@@ -98,6 +99,7 @@ export const AdminSection = () => {
 						<span className="text-primary">
 							{
 								[
+									'New/Existing Election',
 									'Election Setup',
 									'Nominations Opened',
 									'Nominations Closed',
@@ -141,9 +143,17 @@ export const AdminSection = () => {
 				/>
 			)}
 			{sliderValue === 2 && selectedElection && (
-				<OpenNominations electionId={selectedElection.id} />
+				<OpenNominations
+					electionId={selectedElection?.id}
+					setSliderValue={setSliderValue}
+				/>
 			)}
-			{sliderValue === 3 && <div>Nominations Closed Content</div>}
+			{sliderValue === 3 && selectedElection && (
+				<ClosedNominations
+					setSliderValue={setSliderValue}
+					electionId={selectedElection.id}
+				/>
+			)}
 			{sliderValue === 4 && <div>Voting Opened Content</div>}
 			{sliderValue === 5 && <div>Voting Closed Content</div>}
 			{sliderValue === 6 && <div>Results Released Content</div>}

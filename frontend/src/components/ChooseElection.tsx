@@ -61,7 +61,9 @@ export default function ChooseElection({
 	};
 
 	const handleContinue = () => {
-		setSliderValue(2);
+		if (selectedElection) {
+			setSliderValue(selectedElection.status + 2);
+		}
 	};
 
 	return (
