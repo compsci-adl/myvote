@@ -15,6 +15,7 @@
 		"@atlaskit/pragmatic-drag-and-drop": "^1.4.0",
 		"@heroui/react": "2.7.2",
 		"@internationalized/date": "^3.7.0",
+		"@types/papaparse": "^5.3.15",
 		"clsx": "^2.1.1",
 		"framer-motion": "^11.11.9",
 		"ky": "^1.7.2",
