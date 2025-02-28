@@ -4,20 +4,20 @@ import useSWRMutation from 'swr/mutation';
 
 import { fetcher } from '../lib/fetcher';
 
-interface OpenVotingProps {
+interface CloseVotingProps {
 	electionId: number;
 	setSliderValue: React.Dispatch<React.SetStateAction<number>>;
 }
 
-export default function OpenVoting({
+export default function CloseVoting({
 	electionId,
 	setSliderValue,
-}: OpenVotingProps) {
+}: CloseVotingProps) {
 	const [status, setStatus] = useState({ text: '', type: '' });
 
 	const updateElectionStatus = useSWRMutation(
 		`elections/${electionId}`,
-		(url) => fetcher.patch.mutate(url, { arg: { status: 3 } }),
+		(url) => fetcher.patch.mutate(url, { arg: { status: 4 } }),
 		{
 			onError: () => {
 				setStatus({
@@ -32,7 +32,7 @@ export default function OpenVoting({
 				});
 				console.log('Election status updated:', data);
 				setTimeout(() => {
-					setSliderValue(5);
+					setSliderValue(6);
 				}, 3000);
 			},
 		},
@@ -46,8 +46,7 @@ export default function OpenVoting({
 	return (
 		<div className="mt-8">
 			<h1>
-				Once you are ready to open voting, click the button below to open
-				voting.
+				Once the time is up for voting, click the button below to close voting.
 			</h1>
 			<div className="mt-8 flex justify-center">
 				<Button color="primary" onPress={handleContinue}>

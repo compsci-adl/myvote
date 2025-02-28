@@ -12,6 +12,7 @@ import { useRef, useState } from 'react';
 
 import { setRefs } from '../constants/refs';
 import ChooseElection from './ChooseElection';
+import CloseVoting from './CloseVoting';
 import ClosedNominations from './ClosedNominations';
 import { ElectionSetup } from './ElectionSetup/ElectionSetup';
 import OpenNominations from './OpenNominations';
@@ -161,7 +162,12 @@ export const AdminSection = () => {
 					electionId={selectedElection.id}
 				/>
 			)}
-			{sliderValue === 5 && <div>Close Voting Content</div>}
+			{sliderValue === 5 && selectedElection && (
+				<CloseVoting
+					setSliderValue={setSliderValue}
+					electionId={selectedElection.id}
+				/>
+			)}
 			{sliderValue === 6 && <div>Release Results Content</div>}
 			<Modal isOpen={isOpen} onOpenChange={onOpenChange}>
 				<ModalContent>

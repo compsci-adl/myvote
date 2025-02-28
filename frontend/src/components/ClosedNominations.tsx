@@ -3,10 +3,7 @@ import Papa from 'papaparse';
 import { useState } from 'react';
 import useSWRMutation from 'swr/mutation';
 
-
-
 import { fetcher } from '../lib/fetcher';
-
 
 interface ClosedNominationsProps {
 	electionId: number;
