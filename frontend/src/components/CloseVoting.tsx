@@ -25,12 +25,11 @@ export default function CloseVoting({
 					type: 'error',
 				});
 			},
-			onSuccess: (data) => {
+			onSuccess: () => {
 				setStatus({
 					text: 'Election status updated successfully!',
 					type: 'success',
 				});
-				console.log('Election status updated:', data);
 				setTimeout(() => {
 					setSliderValue(6);
 				}, 3000);

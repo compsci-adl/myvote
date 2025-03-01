@@ -54,7 +54,6 @@ export default function ChooseElection({
 	const handleSelectExistingElection = async () => {
 		try {
 			await fetchedElections.trigger();
-			console.log(elections);
 		} catch (error) {
 			console.error('Error fetching elections:', error);
 		}

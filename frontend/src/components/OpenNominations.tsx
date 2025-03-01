@@ -29,7 +29,6 @@ export default function OpenNominations({
 		{
 			onSuccess: (data) => {
 				setPositions(data.positions);
-				console.log(data.positions);
 			},
 		},
 	);
@@ -40,7 +39,7 @@ export default function OpenNominations({
 		`elections/${electionId}`,
 		(url) => fetcher.patch.mutate(url, { arg: { status: 1 } }),
 		{
-			onError: (error) => {
+			onError: () => {
 				const errorMessage =
 					'Failed to update election status. Please try again.';
 				setStatus({
@@ -48,12 +47,11 @@ export default function OpenNominations({
 					type: 'error',
 				});
 			},
-			onSuccess: (data) => {
+			onSuccess: () => {
 				setStatus({
 					text: 'Election status updated successfully!',
 					type: 'success',
 				});
-				console.log('Election status updated:', data);
 				setTimeout(() => {
 					setSliderValue(3);
 				}, 3000);
@@ -62,7 +60,6 @@ export default function OpenNominations({
 	);
 
 	useEffect(() => {
-		console.log('electionId: ', electionId);
 		fetchedPositions.trigger();
 	}, []);
 

@@ -82,7 +82,6 @@ export const ElectionSetup = ({
 		},
 		onSuccess: (resp) => {
 			setStatus({ text: 'Election created successfully!', type: 'success' });
-			console.log(resp);
 			setSelectedElection(resp);
 			setTimeout(() => {
 				setSliderValue(2);

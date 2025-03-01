@@ -33,13 +33,11 @@ export default function ClosedNominations({
 		Papa.parse(file, {
 			header: true,
 			complete: (results: { data: Nomination[] }) => {
-				console.log(results);
 				const parsedNominations = results.data.map((row: any) => ({
 					name: row.Name,
 					statement: row.Statement,
 					roles: row.Roles,
 				}));
-				console.log(parsedNominations);
 				setNominations(parsedNominations);
 			},
 			error: (error: any) => {
@@ -68,12 +66,11 @@ export default function ClosedNominations({
 					type: 'error',
 				});
 			},
-			onSuccess: (data) => {
+			onSuccess: () => {
 				setStatus({
 					text: 'Candidates created successfully!',
 					type: 'success',
 				});
-				console.log('Candidates created:', data);
 				setTimeout(() => {
 					updateElectionStatus.trigger();
 				}, 3000);
@@ -93,12 +90,11 @@ export default function ClosedNominations({
 					type: 'error',
 				});
 			},
-			onSuccess: (data) => {
+			onSuccess: () => {
 				setStatus({
 					text: 'Election status updated successfully!',
 					type: 'success',
 				});
-				console.log('Election status updated:', data);
 				setTimeout(() => {
 					setSliderValue(4);
 				}, 3000);
