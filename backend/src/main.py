@@ -2,10 +2,18 @@ import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel
 
 from src.db import engine
-from src.routers import positions
+from src.routers import candidates, elections, positions
+
+# Configure CORS for local development and production
+ORIGINS = [
+    "http://localhost:5173",
+    "http://localhost:8000",
+    "https://myvote.csclub.org.au",
+]
 
 
 @asynccontextmanager
@@ -28,4 +36,14 @@ async def lifespan(app: FastAPI):
 # Create the FastAPI app, and pass the lifespan context manager.
 app = FastAPI(title="Votes API", lifespan=lifespan)
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(positions.router)
+app.include_router(candidates.router)
+app.include_router(elections.router)
