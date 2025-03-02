@@ -5,6 +5,7 @@ import { useState } from 'react';
 import useSWRMutation from 'swr/mutation';
 
 import { fetcher } from '../../lib/fetcher';
+import type { ElectionStatus } from '../../types/ElectionStatus';
 import ElectionInfo from './ElectionInfo';
 import Positions from './Positions';
 import { electionSchema } from './schemas';
@@ -19,7 +20,7 @@ interface ElectionSetupProps {
 			nomination_end: Date;
 			voting_start: Date;
 			voting_end: Date;
-			status: number;
+			status: ElectionStatus;
 		} | null>
 	>;
 }

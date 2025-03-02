@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlmodel import select
 
@@ -42,7 +42,7 @@ async def create_candidates(
         existing_candidate = existing_candidate_result.scalar_one_or_none()
         if existing_candidate:
             raise HTTPException(
-                status_code=409,
+                status_code=status.HTTP_409_CONFLICT,
                 detail=f"Candidate with name '{request.name}' and statement already exists.",
             )
 
@@ -63,7 +63,8 @@ async def create_candidates(
             position = position_result.scalar_one_or_none()
             if not position:
                 raise HTTPException(
-                    status_code=400, detail=f"Position '{role.strip()}' does not exist."
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Position '{role.strip()}' does not exist.",
                 )
             position_link = CandidatePositionLink(
                 candidate_id=candidate.id, position_id=position.id

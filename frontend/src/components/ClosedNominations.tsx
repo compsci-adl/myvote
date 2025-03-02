@@ -112,7 +112,7 @@ export default function ClosedNominations({
 			<h1>
 				Once the Google Forms is closed, please download the file as a CSV file
 				and upload it here. Once uploaded, check the displayed nominations to
-				see if there are any errors, if there any no issues, continue to the
+				see if there are any errors. If there are no issues, continue to the
 				next stage.
 			</h1>
 			<Input

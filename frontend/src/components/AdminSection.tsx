@@ -11,6 +11,7 @@ import {
 import { useRef, useState } from 'react';
 
 import { setRefs } from '../constants/refs';
+import type { ElectionStatus } from '../types/ElectionStatus';
 import ChooseElection from './ChooseElection';
 import CloseVoting from './CloseVoting';
 import ClosedNominations from './ClosedNominations';
@@ -34,7 +35,7 @@ export const AdminSection = () => {
 		nomination_end: Date;
 		voting_start: Date;
 		voting_end: Date;
-		status: number;
+		status: ElectionStatus;
 	} | null>(null);
 
 	const handlePreviousStage = () => {

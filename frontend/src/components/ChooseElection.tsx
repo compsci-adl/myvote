@@ -3,6 +3,7 @@ import { useState } from 'react';
 import useSWRMutation from 'swr/mutation';
 
 import { fetcher } from '../lib/fetcher';
+import type { ElectionStatus } from '../types/ElectionStatus';
 
 interface ChooseElectionProps {
 	setSliderValue: React.Dispatch<React.SetStateAction<number>>;
@@ -13,7 +14,7 @@ interface ChooseElectionProps {
 		nomination_end: Date;
 		voting_start: Date;
 		voting_end: Date;
-		status: number;
+		status: ElectionStatus;
 	} | null;
 	setSelectedElection: React.Dispatch<
 		React.SetStateAction<{
@@ -23,7 +24,7 @@ interface ChooseElectionProps {
 			nomination_end: Date;
 			voting_start: Date;
 			voting_end: Date;
-			status: number;
+			status: ElectionStatus;
 		} | null>
 	>;
 }
@@ -41,7 +42,7 @@ export default function ChooseElection({
 			nomination_end: Date;
 			voting_start: Date;
 			voting_end: Date;
-			status: number;
+			status: ElectionStatus;
 		}[]
 	>([]);
 
