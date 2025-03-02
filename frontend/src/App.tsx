@@ -1,3 +1,4 @@
+import { AdminSection } from './components/AdminSection';
 import { CandidatesSection } from './components/CandidatesSection';
 import { Footer } from './components/Footer';
 import { Header } from './components/Header';
@@ -13,6 +14,8 @@ export const App = () => {
 			<main className="mx-auto max-w-screen-xl space-y-4 px-2 py-4">
 				{selectedTab === TabType.Voting ? (
 					<VotingSection />
+				) : selectedTab === TabType.Admin ? (
+					<AdminSection />
 				) : (
 					<CandidatesSection />
 				)}

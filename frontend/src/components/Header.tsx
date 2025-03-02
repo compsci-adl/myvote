@@ -63,6 +63,18 @@ export const Header = () => {
 					>
 						Candidates
 					</Button>
+					<Button
+						className={clsx({
+							'bg-primary': selectedTab === TabType.Admin,
+						})}
+						onClick={() => {
+							if (selectedTab !== TabType.Admin) {
+								setSelectedTab(TabType.Admin);
+							}
+						}}
+					>
+						Admin
+					</Button>
 				</ButtonGroup>
 			</NavbarContent>
 			<NavbarContent justify="end">
