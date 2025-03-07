@@ -101,59 +101,64 @@ const CandidateCard = memo((props: CandidateCardProps) => {
 			layout
 			key={props.c.id}
 		>
-			<Card
+			<div 
 				ref={ref}
-				className={clsx(
-					'm-3 bg-primary-100 p-3',
-					isDraggedOver && 'rotate-6',
-					isDragging && 'opacity-50',
-				)}
 			>
-				{props.i === 0 ? (
-					<p>🥇</p>
-				) : props.i === 1 ? (
-					<p>🥈</p>
-				) : props.i === 2 ? (
-					<p>🥉</p>
-				) : props.i < 6 ? (
-					<p>{props.i + 1}</p>
-				) : (
-					<></>
-				)}
-				<CardBody className="text-center">
-					<h6>{props.c.name}</h6>
-				</CardBody>
-				<Divider />
-				<CardFooter className="justify-center">
-					<Button
-						size="sm"
-						isIconOnly={true}
-						variant="flat"
-						color="primary"
-						className="text-xl"
-						onClick={() => {
-							// Update focused user to this one
-							setFocusedUsers([props.c.id.toString()]);
+				{/* TODO: change useDND hook so y cord is known */}
+				<Card
+					className={clsx(
+						isDraggedOver && 'translate-x-3',
+						isDraggedOver && 'rotate-1',
+						'm-3 bg-primary-100 p-3',
+						isDragging && 'opacity-50',
+					)}
+				>
+					{props.i === 0 ? (
+						<p>🥇</p>
+					) : props.i === 1 ? (
+						<p>🥈</p>
+					) : props.i === 2 ? (
+						<p>🥉</p>
+					) : props.i < 6 ? (
+						<p>{props.i + 1}</p>
+					) : (
+						<></>
+					)}
+					<CardBody className="text-center">
+						<h6>{props.c.name}</h6>
+					</CardBody>
+					<Divider />
+					<CardFooter className="justify-center">
+						<Button
+							size="sm"
+							isIconOnly={true}
+							variant="flat"
+							color="primary"
+							className="text-xl"
+							onClick={() => {
+								// Update focused user to this one
+								setFocusedUsers([props.c.id.toString()]);
 
-							// Change tab and reset to top
-							setSelectedTab(TabType.Candidates);
-							window.scrollTo(0, 0);
+								// Change tab and reset to top
+								setSelectedTab(TabType.Candidates);
+								window.scrollTo(0, 0);
 
-							// Set timeout to scroll to our desired location
-							// TODO: seek feedback on this implementation, and whether 'smooth' or 'instant' is better.
-							setTimeout(
-								() =>
-									refs?.current
-										.get(props.c.id)
-										?.scrollIntoView({ block: 'center', behavior: 'smooth' }),
-								0,
-							);
-						}}
-					>
-						📝
-					</Button>
-				</CardFooter>
-			</Card>
+								// Set timeout to scroll to our desired location
+								// TODO: seek feedback on this implementation, and whether 'smooth' or 'instant' is better.
+								setTimeout(
+									() =>
+										refs?.current
+											.get(props.c.id)
+											?.scrollIntoView({ block: 'center', behavior: 'smooth' }),
+									0,
+								);
+							}}
+						>
+							📝
+						</Button>
+					</CardFooter>
+				</Card>
+			</div>
 		</motion.div>
 	);
 });
