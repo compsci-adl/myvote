@@ -101,9 +101,8 @@ const CandidateCard = memo((props: CandidateCardProps) => {
 			layout
 			key={props.c.id}
 		>
-			
 			<div ref={ref}>
-			{/* TODO: change useDND hook so y cord is known */}
+				{/* TODO: change useDND hook so y cord is known */}
 				<Card
 					className={clsx(
 						isDraggedOver && 'translate-x-3',
