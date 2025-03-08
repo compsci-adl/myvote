@@ -101,9 +101,7 @@ const CandidateCard = memo((props: CandidateCardProps) => {
 			layout
 			key={props.c.id}
 		>
-			<div 
-				ref={ref}
-			>
+			<div ref={ref}>
 				{/* TODO: change useDND hook so y cord is known */}
 				<Card
 					className={clsx(
