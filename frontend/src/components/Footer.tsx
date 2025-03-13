@@ -37,7 +37,7 @@ const LINKS = [
 
 export const Footer = () => {
 	return (
-		<footer className="text-apple-gray-700">
+		<footer className="mx-6 text-apple-gray-700 md:mx-12 lg:mx-24">
 			<Divider className="mb-4" />
 			<div className="grid grid-cols-2 items-center gap-2 mobile:grid-cols-1 mobile:justify-items-center mobile:gap-4">
 				<div className="flex items-center gap-2">

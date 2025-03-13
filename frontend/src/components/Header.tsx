@@ -12,6 +12,7 @@ import clsx from 'clsx';
 import { useFocusedUsers, useSelectedTab } from '../stores';
 import { TabType } from '../types/tab';
 import { useDarkMode } from '../utils/dark-mode';
+import { useOidc } from './../oidc';
 
 const HEADER_BUTTON_PROPS = {
 	size: 'sm',
@@ -25,6 +26,7 @@ export const Header = () => {
 	const { isDarkMode, toggleIsDarkMode } = useDarkMode();
 	const { selectedTab, setSelectedTab } = useSelectedTab();
 	const { setFocusedUsers } = useFocusedUsers();
+	const { isUserLoggedIn, initializationError } = useOidc();
 
 	return (
 		<Navbar
@@ -38,49 +40,46 @@ export const Header = () => {
 				<h1 className="font-bold text-inherit">MyVote</h1>
 			</NavbarBrand>
 			<NavbarContent justify="center">
-				<ButtonGroup>
-					<Button
-						className={clsx({
-							'bg-primary': selectedTab === TabType.Voting,
-						})}
-						onClick={() => {
-							if (selectedTab !== TabType.Voting)
-								setSelectedTab(TabType.Voting);
-						}}
-					>
-						Voting
-					</Button>
-					<Button
-						className={clsx({
-							'bg-primary': selectedTab === TabType.Candidates,
-						})}
-						onClick={() => {
-							if (selectedTab !== TabType.Candidates) {
+				{isUserLoggedIn && (
+					<ButtonGroup>
+						<Button
+							className={clsx({ 'bg-primary': selectedTab === TabType.Voting })}
+							onPress={() => setSelectedTab(TabType.Voting)}
+						>
+							Voting
+						</Button>
+						<Button
+							className={clsx({
+								'bg-primary': selectedTab === TabType.Candidates,
+							})}
+							onPress={() => {
 								setFocusedUsers([]);
 								setSelectedTab(TabType.Candidates);
-							}
-						}}
-					>
-						Candidates
-					</Button>
-					<Button
-						className={clsx({
-							'bg-primary': selectedTab === TabType.Admin,
-						})}
-						onClick={() => {
-							if (selectedTab !== TabType.Admin) {
-								setSelectedTab(TabType.Admin);
-							}
-						}}
-					>
-						Admin
-					</Button>
-				</ButtonGroup>
+							}}
+						>
+							Candidates
+						</Button>
+						<Button
+							className={clsx({ 'bg-primary': selectedTab === TabType.Admin })}
+							onPress={() => setSelectedTab(TabType.Admin)}
+						>
+							Admin
+						</Button>
+					</ButtonGroup>
+				)}
 			</NavbarContent>
 			<NavbarContent justify="end">
+				{initializationError && (
+					<span className="text-red-500">
+						{initializationError.isAuthServerLikelyDown
+							? 'Keycloak server is down'
+							: `Auth Error: ${initializationError.message}`}
+					</span>
+				)}
+
 				<NavbarItem>
 					<Tooltip content="Toggle Dark Mode" size="sm">
-						<Button {...HEADER_BUTTON_PROPS} onClick={toggleIsDarkMode}>
+						<Button {...HEADER_BUTTON_PROPS} onPress={toggleIsDarkMode}>
 							{isDarkMode ? '🌚' : '🌞'}
 						</Button>
 					</Tooltip>
