@@ -77,6 +77,8 @@ export const Header = () => {
 					</span>
 				)}
 
+				{isUserLoggedIn ? <LoggedInAuthButton /> : <NotLoggedInAuthButton />}
+
 				<NavbarItem>
 					<Tooltip content="Toggle Dark Mode" size="sm">
 						<Button {...HEADER_BUTTON_PROPS} onPress={toggleIsDarkMode}>
@@ -86,5 +88,31 @@ export const Header = () => {
 				</NavbarItem>
 			</NavbarContent>
 		</Navbar>
+	);
+};
+
+const LoggedInAuthButton = () => {
+	const { logout } = useOidc({ assert: 'user logged in' });
+
+	return (
+		<div className="flex items-center gap-2">
+			<Button
+				color="primary"
+				size="md"
+				onPress={() => logout({ redirectTo: 'home' })}
+			>
+				Logout
+			</Button>
+		</div>
+	);
+};
+
+const NotLoggedInAuthButton = () => {
+	const { login } = useOidc({ assert: 'user not logged in' });
+
+	return (
+		<Button color="primary" size="md" onPress={() => login()}>
+			Login
+		</Button>
 	);
 };
