@@ -16,8 +16,6 @@ const indexRoute = createRoute({
 	beforeLoad: async () => {
 		if (oidc.isUserLoggedIn) {
 			router.navigate({ to: '/protected' });
-		} else {
-			await enforceLogin();
 		}
 	},
 	component: lazy(() => import('./../pages/WelcomePage')),
