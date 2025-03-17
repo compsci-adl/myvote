@@ -8,6 +8,8 @@ import {
 	Tooltip,
 } from '@heroui/react';
 import clsx from 'clsx';
+import { decodeJwt } from 'oidc-spa/tools/decodeJwt';
+import { useMemo } from 'react';
 
 import { useFocusedUsers, useSelectedTab } from '../stores';
 import { TabType } from '../types/tab';
@@ -22,11 +24,33 @@ const HEADER_BUTTON_PROPS = {
 	className: 'text-xl',
 } as const;
 
+interface CustomJwtPayload {
+	realm_access?: {
+		roles: string[];
+	};
+}
+
 export const Header = () => {
 	const { isDarkMode, toggleIsDarkMode } = useDarkMode();
 	const { selectedTab, setSelectedTab } = useSelectedTab();
 	const { setFocusedUsers } = useFocusedUsers();
-	const { isUserLoggedIn, initializationError } = useOidc();
+	const { isUserLoggedIn, initializationError, tokens } = useOidc();
+
+	const decodedAccessToken = useMemo<CustomJwtPayload | undefined>(() => {
+		if (!tokens) return undefined;
+
+		try {
+			return decodeJwt(tokens.accessToken) as CustomJwtPayload;
+		} catch {
+			return undefined;
+		}
+	}, [tokens]);
+
+	const isAdmin = () => {
+		return decodedAccessToken?.realm_access?.roles.includes(
+			'restricted-access',
+		);
+	};
 
 	return (
 		<Navbar
@@ -59,12 +83,16 @@ export const Header = () => {
 						>
 							Candidates
 						</Button>
-						<Button
-							className={clsx({ 'bg-primary': selectedTab === TabType.Admin })}
-							onPress={() => setSelectedTab(TabType.Admin)}
-						>
-							Admin
-						</Button>
+						{isAdmin() && (
+							<Button
+								className={clsx({
+									'bg-primary': selectedTab === TabType.Admin,
+								})}
+								onPress={() => setSelectedTab(TabType.Admin)}
+							>
+								Admin
+							</Button>
+						)}
 					</ButtonGroup>
 				)}
 			</NavbarContent>

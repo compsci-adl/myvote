@@ -1,5 +1,4 @@
 import { createReactOidc } from 'oidc-spa/react';
-import { z } from 'zod';
 
 export const {
 	OidcProvider,
@@ -60,10 +59,20 @@ export const {
         }
     },
     */
-	decodedIdTokenSchema: z.object({
-		sub: z.string(),
-		name: z.string(),
-	}),
+	// decodedIdTokenSchema: z.object({
+	// 	sub: z.string(),
+	// 	name: z.string(),
+	// }),
+	decodedIdTokenSchema: {
+		parse: (decodedIdToken) => {
+			type DecodedIdToken = {
+				sub: string;
+				preferred_username: string;
+			};
+
+			return decodedIdToken as DecodedIdToken;
+		},
+	},
 	//autoLogoutParams: { redirectTo: "current page" } // Default
 	//autoLogoutParams: { redirectTo: "home" }
 	//autoLogoutParams: { redirectTo: "specific url", url: "/a-page" }
