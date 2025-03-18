@@ -7,12 +7,9 @@ import {
 	NavbarItem,
 	Tooltip,
 } from '@heroui/react';
+import { useRouter, useMatchRoute } from '@tanstack/react-router';
 import clsx from 'clsx';
-import { decodeJwt } from 'oidc-spa/tools/decodeJwt';
-import { useMemo } from 'react';
 
-import { useFocusedUsers, useSelectedTab } from '../stores';
-import { TabType } from '../types/tab';
 import { useDarkMode } from '../utils/dark-mode';
 import { useOidc } from './../oidc';
 
@@ -24,32 +21,22 @@ const HEADER_BUTTON_PROPS = {
 	className: 'text-xl',
 } as const;
 
-interface CustomJwtPayload {
-	realm_access?: {
-		roles: string[];
-	};
-}
-
 export const Header = () => {
 	const { isDarkMode, toggleIsDarkMode } = useDarkMode();
-	const { selectedTab, setSelectedTab } = useSelectedTab();
-	const { setFocusedUsers } = useFocusedUsers();
 	const { isUserLoggedIn, initializationError, tokens } = useOidc();
+	const router = useRouter();
+	const matchRoute = useMatchRoute();
 
-	const decodedAccessToken = useMemo<CustomJwtPayload | undefined>(() => {
-		if (!tokens) return undefined;
-
-		try {
-			return decodeJwt(tokens.accessToken) as CustomJwtPayload;
-		} catch {
-			return undefined;
-		}
-	}, [tokens]);
+	const isActive = (path: string) => !!matchRoute({ to: path, fuzzy: false });
 
 	const isAdmin = () => {
-		return decodedAccessToken?.realm_access?.roles.includes(
-			'restricted-access',
-		);
+		if (!tokens) return false;
+		try {
+			const decodedToken = JSON.parse(atob(tokens.accessToken.split('.')[1]));
+			return decodedToken?.realm_access?.roles.includes('restricted-access');
+		} catch {
+			return false;
+		}
 	};
 
 	return (
@@ -63,32 +50,26 @@ export const Header = () => {
 				<img src="/favicon.svg" alt="Logo" className="mr-2 w-6" />
 				<h1 className="font-bold text-inherit">MyVote</h1>
 			</NavbarBrand>
+
 			<NavbarContent justify="center">
 				{isUserLoggedIn && (
 					<ButtonGroup>
 						<Button
-							className={clsx({ 'bg-primary': selectedTab === TabType.Voting })}
-							onPress={() => setSelectedTab(TabType.Voting)}
+							className={clsx({ 'bg-primary': isActive('/voting') })}
+							onPress={() => router.navigate({ to: '/voting' })}
 						>
 							Voting
 						</Button>
 						<Button
-							className={clsx({
-								'bg-primary': selectedTab === TabType.Candidates,
-							})}
-							onPress={() => {
-								setFocusedUsers([]);
-								setSelectedTab(TabType.Candidates);
-							}}
+							className={clsx({ 'bg-primary': isActive('/candidates') })}
+							onPress={() => router.navigate({ to: '/candidates' })}
 						>
 							Candidates
 						</Button>
 						{isAdmin() && (
 							<Button
-								className={clsx({
-									'bg-primary': selectedTab === TabType.Admin,
-								})}
-								onPress={() => setSelectedTab(TabType.Admin)}
+								className={clsx({ 'bg-primary': isActive('/admin') })}
+								onPress={() => router.navigate({ to: '/admin' })}
 							>
 								Admin
 							</Button>
@@ -96,11 +77,12 @@ export const Header = () => {
 					</ButtonGroup>
 				)}
 			</NavbarContent>
+
 			<NavbarContent justify="end">
 				{initializationError && (
 					<span className="text-red-500">
 						{initializationError.isAuthServerLikelyDown
-							? 'Keycloak server is down'
+							? 'Auth server is down'
 							: `Auth Error: ${initializationError.message}`}
 					</span>
 				)}

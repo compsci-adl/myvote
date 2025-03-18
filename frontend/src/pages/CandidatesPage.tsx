@@ -6,7 +6,7 @@ import { candidates } from '../data/candidates';
 import { positions } from '../data/positions';
 import { useFocusedUsers } from '../stores';
 
-export const CandidatesSection = () => {
+export default function CandidatesPage() {
 	const { focusedUsers } = useFocusedUsers();
 	const r = useRef(new Map());
 	setRefs(r);
@@ -31,4 +31,4 @@ export const CandidatesSection = () => {
 			))}
 		</Accordion>
 	);
-};
+}

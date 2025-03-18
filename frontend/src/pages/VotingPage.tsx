@@ -9,10 +9,10 @@ import {
 	ModalFooter,
 } from '@heroui/react';
 
+import { PositionSection } from '../components/PositionSection';
 import { positions } from '../data/positions';
-import { PositionSection } from './PositionSection';
 
-export const VotingSection = () => {
+export default function VotingPage() {
 	const { isOpen, onOpen, onClose } = useDisclosure();
 	return (
 		<>
@@ -42,4 +42,4 @@ export const VotingSection = () => {
 			</Modal>
 		</>
 	);
-};
+}

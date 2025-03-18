@@ -10,16 +10,16 @@ import {
 } from '@heroui/react';
 import { useRef, useState } from 'react';
 
+import ChooseElection from '../components/ChooseElection';
+import CloseVoting from '../components/CloseVoting';
+import ClosedNominations from '../components/ClosedNominations';
+import { ElectionSetup } from '../components/ElectionSetup/ElectionSetup';
+import OpenNominations from '../components/OpenNominations';
+import OpenVoting from '../components/OpenVoting';
 import { setRefs } from '../constants/refs';
 import type { ElectionStatus } from '../types/ElectionStatus';
-import ChooseElection from './ChooseElection';
-import CloseVoting from './CloseVoting';
-import ClosedNominations from './ClosedNominations';
-import { ElectionSetup } from './ElectionSetup/ElectionSetup';
-import OpenNominations from './OpenNominations';
-import OpenVoting from './OpenVoting';
 
-export const AdminSection = () => {
+export default function AdminSection() {
 	const r = useRef(new Map());
 	setRefs(r);
 
@@ -194,4 +194,4 @@ export const AdminSection = () => {
 			</Modal>
 		</div>
 	);
-};
+}
