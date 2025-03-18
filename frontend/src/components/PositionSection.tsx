@@ -125,7 +125,8 @@ const CandidateCard = memo((props: CandidateCardProps) => {
 					<CardBody className="text-center">
 						<h6>{props.c.name}</h6>
 					</CardBody>
-					<Divider />
+					{/* TODO: Fix the button links */}
+					{/* <Divider />
 					<CardFooter className="justify-center">
 						<Button
 							size="sm"
@@ -133,7 +134,7 @@ const CandidateCard = memo((props: CandidateCardProps) => {
 							variant="flat"
 							color="primary"
 							className="text-xl"
-							onClick={() => {
+							onPress={() => {
 								// Update focused user to this one
 								setFocusedUsers([props.c.id.toString()]);
 
@@ -154,7 +155,7 @@ const CandidateCard = memo((props: CandidateCardProps) => {
 						>
 							📝
 						</Button>
-					</CardFooter>
+					</CardFooter> */}
 				</Card>
 			</div>
 		</motion.div>
