@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import useSWRMutation from 'swr/mutation';
 
 import { setRefs } from '../constants/refs';
-import { candidates } from '../data/candidates';
+// import { candidates } from '../data/candidates';
 import { positions } from '../data/positions';
 import { fetcher } from '../lib/fetcher';
 import { useFocusedUsers } from '../stores';
@@ -50,25 +50,26 @@ export default function CandidatesPage() {
 			{message ? (
 				<p className="text-center text-xl">{message}</p>
 			) : (
-				<Accordion defaultExpandedKeys={focusedUsers}>
-					{candidates.map((c) => (
-						<AccordionItem
-							id={c.id.toString()}
-							key={c.id}
-							title={c.name}
-							aria-label={c.name}
-							subtitle={c.nominations.map((i) => positions[i].name).join(', ')}
-						>
-							<p
-								ref={(el) => {
-									if (el) r.current.set(c.id, el);
-								}}
-							>
-								{c.statement}
-							</p>
-						</AccordionItem>
-					))}
-				</Accordion>
+				// <Accordion defaultExpandedKeys={focusedUsers}>
+				// 	{candidates.map((c) => (
+				// 		<AccordionItem
+				// 			id={c.id.toString()}
+				// 			key={c.id}
+				// 			title={c.name}
+				// 			aria-label={c.name}
+				// 			subtitle={c.nominations.map((i) => positions[i].name).join(', ')}
+				// 		>
+				// 			<p
+				// 				ref={(el) => {
+				// 					if (el) r.current.set(c.id, el);
+				// 				}}
+				// 			>
+				// 				{c.statement}
+				// 			</p>
+				// 		</AccordionItem>
+				// 	))}
+				// </Accordion>
+				<p>Test</p>
 			)}
 		</div>
 	);

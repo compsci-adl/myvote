@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-import { candidates } from './data/candidates';
+// import { candidates } from './data/candidates';
 import { positions } from './data/positions';
 import type { Candidate } from './types/candidate';
 import { TabType } from './types/tab';
@@ -38,16 +38,16 @@ function shuffleArray(array: Candidate[]) {
 	}
 }
 
-export const useCandidateStore = create(
-	persist<CandidateProps>(
-		(set) => ({
-			candidates: positions.map((p) => {
-				const r = candidates.filter((c) => c.nominations.includes(p.id));
-				shuffleArray(r);
-				return r;
-			}),
-			setCandidates: (candidates: Candidate[][]) => set({ candidates }),
-		}),
-		{ name: 'vote-storage' },
-	),
-);
+// export const useCandidateStore = create(
+// 	persist<CandidateProps>(
+// 		(set) => ({
+// 			candidates: positions.map((p) => {
+// 				const r = candidates.filter((c) => c.nominations.includes(p.id));
+// 				shuffleArray(r);
+// 				return r;
+// 			}),
+// 			setCandidates: (candidates: Candidate[][]) => set({ candidates }),
+// 		}),
+// 		{ name: 'vote-storage' },
+// 	),
+// );
