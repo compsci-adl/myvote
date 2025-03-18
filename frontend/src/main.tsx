@@ -1,11 +1,13 @@
 import { HeroUIProvider } from '@heroui/react';
+import { RouterProvider } from '@tanstack/react-router';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ErrorBoundary } from 'react-error-boundary';
 
-import { App } from './App.tsx';
 import { Error } from './components/Error.tsx';
 import './index.css';
+import { OidcProvider } from './oidc';
+import { router } from './router/router';
 
 // import { mountStoreDevtool } from 'simple-zustand-devtools';
 
@@ -16,9 +18,11 @@ if (import.meta.env.DEV) {
 createRoot(document.getElementById('root')!).render(
 	<StrictMode>
 		<ErrorBoundary FallbackComponent={Error}>
-			<HeroUIProvider>
-				<App />
-			</HeroUIProvider>
+			<OidcProvider>
+				<HeroUIProvider>
+					<RouterProvider router={router} />
+				</HeroUIProvider>
+			</OidcProvider>
 		</ErrorBoundary>
 	</StrictMode>,
 );
