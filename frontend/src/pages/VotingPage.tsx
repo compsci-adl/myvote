@@ -19,7 +19,7 @@ export default function VotingPage() {
 	const { isOpen, onOpen, onClose } = useDisclosure();
 
 	interface Position {
-		id: number;
+		id: string;
 		name: string;
 	}
 
@@ -66,7 +66,7 @@ export default function VotingPage() {
 				}
 			}
 		}
-	}, [firstElection, fetchPositions]);
+	}, [firstElection, fetchPositions, positions]);
 
 	return (
 		<>

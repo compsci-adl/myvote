@@ -32,8 +32,8 @@ class Voter(SQLModel, table=True):
 
 
 class CandidatePositionLink(SQLModel, table=True):
-    candidate_id: int = Field(foreign_key="candidate.id", primary_key=True)
-    position_id: int = Field(foreign_key="position.id", primary_key=True)
+    candidate_id: str = Field(foreign_key="candidate.id", primary_key=True)
+    position_id: str = Field(foreign_key="position.id", primary_key=True)
 
 
 # TODO: Candidates should have pictures of themselves

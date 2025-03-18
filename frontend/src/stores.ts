@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 // import { candidates } from './data/candidates';
-import { positions } from './data/positions';
+// import { positions } from './data/positions';
 import type { Candidate } from './types/candidate';
 import { TabType } from './types/tab';
 

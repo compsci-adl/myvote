@@ -30,7 +30,7 @@ const useDraggingCandidate = create<DraggingCandidateState>((set) => ({
 type CandidateIndividual = Candidate & { position: Position };
 
 type CandidateCardProps = {
-	i: number;
+	i: string;
 	c: CandidateIndividual;
 	candidates: Record<number, Candidate[]>;
 	setCandidates: (candidates: Record<number, Candidate[]>) => void;
@@ -200,7 +200,7 @@ export const PositionSection = ({ position }: { position: Position }) => {
 			);
 
 			const filteredCandidates = candidatesData.candidates.filter((candidate) =>
-				nominationMap[Number(position.id)]?.includes(Number(candidate.id)),
+				nominationMap[(position.id)]?.includes((candidate.id)),
 			);
 
 			setCandidates((prev) => ({
