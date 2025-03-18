@@ -139,6 +139,9 @@ const CandidateCard = memo(
 export const PositionSection = ({ position }: { position: Position }) => {
 	const [candidates, setCandidates] = useState<Record<number, Candidate[]>>({});
 	const [electionId, setElectionId] = useState<string | null>(null);
+	const [candidateLinks, setCandidateLinks] = useState<
+		{ candidate_id: string }[]
+	>([]);
 
 	const fetchElections = useSWRMutation('elections', fetcher.get.mutate, {
 		onSuccess: (data) => {
@@ -165,15 +168,47 @@ export const PositionSection = ({ position }: { position: Position }) => {
 		},
 	);
 
+	const fetchCandidateLinks = useSWRMutation(
+		`candidate_position_links/${electionId}`,
+		fetcher.get.mutate,
+		{
+			onSuccess: (data) => setCandidateLinks(data.candidate_position_links),
+		},
+	);
+
 	useMount(() => {
 		fetchElections.trigger();
 	});
-
 	useEffect(() => {
-		if (electionId) {
-			fetchCandidates.trigger();
-		}
-	}, [electionId, fetchCandidates]);
+		if (!electionId) return;
+
+		Promise.all([
+			fetchCandidateLinks.trigger(),
+			fetchCandidates.trigger(),
+		]).then(([candidateLinksData, candidatesData]) => {
+			if (!candidatesData || !Array.isArray(candidatesData.candidates)) {
+				return;
+			}
+
+			const nominationMap = candidateLinksData.candidate_position_links.reduce(
+				(acc, link) => {
+					if (!acc[link.position_id]) acc[link.position_id] = [];
+					acc[link.position_id].push(link.candidate_id);
+					return acc;
+				},
+				{} as Record<number, string[]>,
+			);
+
+			const filteredCandidates = candidatesData.candidates.filter((candidate) =>
+				nominationMap[Number(position.id)]?.includes(Number(candidate.id)),
+			);
+
+			setCandidates((prev) => ({
+				...prev,
+				[position.id]: filteredCandidates,
+			}));
+		});
+	}, [electionId]);
 
 	return (
 		<>
