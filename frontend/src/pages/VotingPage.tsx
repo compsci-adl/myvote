@@ -12,42 +12,61 @@ import { useState, useEffect } from 'react';
 import useSWRMutation from 'swr/mutation';
 
 import { PositionSection } from '../components/PositionSection';
-import { positions } from '../data/positions';
 import { fetcher } from '../lib/fetcher';
+import { useMount } from '../utils/mount';
 
 export default function VotingPage() {
 	const { isOpen, onOpen, onClose } = useDisclosure();
-	interface Election {
-		status: number;
+
+	interface Position {
+		id: number;
+		name: string;
 	}
 
-	const [elections, setElections] = useState<Election[]>([]);
+	const [firstElection, setFirstElection] = useState([]);
+	const [positions, setPositions] = useState<Position[]>([]);
 	const [message, setMessage] = useState('');
 
-	const { trigger } = useSWRMutation('elections', fetcher.get.mutate, {
+	const fetchElections = useSWRMutation('elections', fetcher.get.mutate, {
 		onSuccess: (data) => {
-			setElections(data.elections);
+			const firstElection = data.elections?.[0];
+
+			if (firstElection) {
+				setFirstElection(firstElection);
+			}
 		},
 	});
 
-	useEffect(() => {
-		trigger();
-	}, [trigger]);
+	const fetchPositions = useSWRMutation(
+		`positions/${firstElection.id}`,
+		fetcher.get.mutate,
+		{
+			onSuccess: (data) => {
+				setPositions(data.positions);
+			},
+		},
+	);
+
+	useMount(() => {
+		fetchElections.trigger();
+	});
 
 	useEffect(() => {
-		if (elections.length === 0) {
+		if (!firstElection) {
 			setMessage('No elections available.');
 		} else {
-			const firstElection = elections[0];
 			if (firstElection.status < 3) {
 				setMessage("Voting hasn't opened yet.");
 			} else if (firstElection.status > 3) {
 				setMessage('Voting has closed.');
 			} else {
 				setMessage('');
+				if (!positions || positions.length === 0) {
+					fetchPositions.trigger();
+				}
 			}
 		}
-	}, [elections]);
+	}, [firstElection, fetchPositions]);
 
 	return (
 		<>

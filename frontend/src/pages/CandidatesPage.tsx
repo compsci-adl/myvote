@@ -4,7 +4,7 @@ import useSWRMutation from 'swr/mutation';
 
 import { setRefs } from '../constants/refs';
 // import { candidates } from '../data/candidates';
-import { positions } from '../data/positions';
+// import { positions } from '../data/positions';
 import { fetcher } from '../lib/fetcher';
 import { useFocusedUsers } from '../stores';
 

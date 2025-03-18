@@ -196,15 +196,15 @@ export const PositionSection = (props: { position: Position }) => {
 							(link) => Number(link.candidate_id) === Number(candidateGroup.id),
 						);
 
-						console.log('Candidate Group:', candidateGroup);
-						console.log('Nominations:', nominations);
+						// console.log('Candidate Group:', candidateGroup);
+						// console.log('Nominations:', nominations);
 
-						console.log('Candidate Group ID:', candidateGroup.id);
+						// console.log('Candidate Group ID:', candidateGroup.id);
 
 						// Log candidate_ids from candidateLinks
-						candidateLinks.forEach((link) => {
-							console.log('Candidate ID:', String(link.candidate_id));
-						});
+						// candidateLinks.forEach((link) => {
+						// 	console.log('Candidate ID:', String(link.candidate_id));
+						// });
 
 						return [
 							{
@@ -231,7 +231,7 @@ export const PositionSection = (props: { position: Position }) => {
 						),
 					)
 				) {
-					console.log('Parsed Candidates:', parsedCandidates);
+					// console.log('Parsed Candidates:', parsedCandidates);
 					setCandidates(parsedCandidates);
 				}
 			}
