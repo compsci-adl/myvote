@@ -117,9 +117,11 @@ export default function CandidatesPage() {
 	]);
 
 	return (
-		<div className="flex min-h-screen items-center justify-center">
+		<div className="flex items-center justify-center">
 			{message ? (
-				<p className="text-center text-xl">{message}</p>
+				<div className="flex min-h-screen items-center justify-center">
+					<p className="text-center text-xl">{message}</p>
+				</div>
 			) : (
 				<Accordion defaultExpandedKeys={focusedUsers}>
 					{(candidates[firstElection.id] ?? []).map((c) => {
