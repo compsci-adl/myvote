@@ -10,10 +10,14 @@ dependencies = [
     "alembic>=1.14.0",
     "fastapi[standard]>=0.115.6",
     "greenlet>=3.1.1",
+    "libsql-experimental>=0.0.41",
     "pre-commit>=4.1.0",
     "pydantic>=2.10.4",
+    "python-dotenv>=1.0.1",
+    "sqlalchemy-libsql>=0.1.0",
     "sqlalchemy>=2.0.36",
     "sqlmodel>=0.0.22",
+    "uvicorn>=0.34.0",
 ]
 
 [tool.ruff]
