@@ -156,7 +156,6 @@ dependencies = [
     { name = "alembic" },
     { name = "fastapi", extra = ["standard"] },
     { name = "greenlet" },
-    { name = "libsql-experimental" },
     { name = "pre-commit" },
     { name = "pydantic" },
     { name = "python-dotenv" },
@@ -179,7 +178,6 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.14.0" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.115.6" },
     { name = "greenlet", specifier = ">=3.1.1" },
-    { name = "libsql-experimental", specifier = ">=0.0.41" },
     { name = "pre-commit", specifier = ">=4.1.0" },
     { name = "pydantic", specifier = ">=2.10.4" },
     { name = "python-dotenv", specifier = ">=1.0.1" },
@@ -553,17 +551,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/d2/76/8968356d45ee174ebe966ff0112bed1bd932851d6532737c2ee8b40ed6e0/libsql_client-0.3.1.tar.gz", hash = "sha256:1815893bf5271f1940919b2a583ebbafb0ec54028e9d01e4eda151a6e85a8618", size = 39605 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/83/f0/b0d7c7331f975bcc3effd01abb094723891fd42bca7f702b4a0cf06c1bff/libsql_client-0.3.1-py3-none-any.whl", hash = "sha256:088756f65802f5ca5857a99cf374d9b7aa015b97b91b0cb725ef6a033e23268b", size = 46100 },
-]
-
-[[package]]
-name = "libsql-experimental"
-version = "0.0.41"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/3f/35/3c82419f305835f41f7062ae152640afda3d0444a787de57a68c0b07edc2/libsql_experimental-0.0.41.tar.gz", hash = "sha256:d72e3da6c2488fd6e4410ae74a5339886b8b54a62c71e63f72d05e27d9fb3288", size = 28842 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/9a/84/4bbd3adc3defdd3e9d13c8ae7a9c62cfb95ebac74ef9101ea9e5c64fe844/libsql_experimental-0.0.41-cp312-cp312-macosx_10_12_x86_64.whl", hash = "sha256:3d8e316d2975d9c7b104b041d777b69eb241c11d32c443225b4f8f3c752e8b31", size = 4038354 },
-    { url = "https://files.pythonhosted.org/packages/b1/85/f287aad9676e9582b61406610246c2929d76ac63a53ff715609d30bb3cfd/libsql_experimental-0.0.41-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:0acb263526c353061bf8e12ff66ae78d6cc4ab59603acd3d313df7e431a05c82", size = 3837543 },
-    { url = "https://files.pythonhosted.org/packages/b2/8c/554bc9e2202f348dc1008f6cd73a9ff1023c66dba6311ac4928c58f96695/libsql_experimental-0.0.41-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:af8df4474b4f95d662ca97b0b5f604a9acdc0e05fe92f2e26a33c34ca72a9557", size = 4414148 },
 ]
 
 [[package]]
