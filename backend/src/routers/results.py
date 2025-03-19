@@ -15,7 +15,7 @@ router = APIRouter(tags=["Results"])
 async def get_results(
     election_id: str, session: AsyncSession = Depends(get_async_session)
 ):
-    """Calculate and return election results with position names and candidate names."""
+    """Calculate and return election results with position names, candidate names, vote counts, and rankings."""
 
     # Fetch ballots for the given election_id
     ballots_query = await session.execute(
@@ -55,14 +55,51 @@ async def get_results(
         )
         winners_data = winners_query.scalars().all()
 
-        results.append(
-            {
-                "position_id": position_id,
-                "position_name": positions[position_id],
-                "winners": [
-                    {"id": winner.id, "name": winner.name} for winner in winners_data
-                ],
-            }
+        # Compute vote counts and rankings
+        votes = defaultdict(int)
+        for ballot in ballots:
+            for preference in ballot:
+                votes[preference] += 1
+
+        # Sort candidates by votes
+        sorted_candidates = sorted(
+            [(candidate_id, votes[candidate_id]) for candidate_id in candidates],
+            key=lambda x: x[1],
+            reverse=True,
         )
+
+        # Get preferences count for each candidate
+        candidates_preferences = defaultdict(int)
+        for ballot in ballots:
+            for preference in ballot:
+                candidates_preferences[preference] += 1
+
+        # Compile result
+        result = {
+            "position_id": position_id,
+            "position_name": positions[position_id],
+            "winners": [
+                {"id": winner.id, "name": winner.name} for winner in winners_data
+            ],
+            "candidates": [
+                {
+                    "id": candidate_id,
+                    "name": (
+                        await session.execute(
+                            select(Candidate).where(Candidate.id == candidate_id)
+                        )
+                    )
+                    .scalars()
+                    .first()
+                    .name,
+                    "votes": votes.get(candidate_id, 0),
+                    "preferences_count": candidates_preferences.get(candidate_id, 0),
+                    "ranking": rank + 1,
+                }
+                for rank, (candidate_id, _) in enumerate(sorted_candidates)
+            ],
+        }
+
+        results.append(result)
 
     return {"election_id": election_id, "results": results}
