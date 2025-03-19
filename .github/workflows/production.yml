@@ -54,17 +54,6 @@ jobs:
           echo "TURSO_DATABASE_URL=${{ secrets.TURSO_DATABASE_URL }}" >> backend/src/.env
           echo "TURSO_AUTH_TOKEN=${{ secrets.TURSO_AUTH_TOKEN }}" >> backend/src/.env
 
-      - name: Build MyVote (frontend) Docker image
-        env:
-          PRODUCTION_BUILD: 'true'
-        run: |
-          docker buildx build \
-          --cache-from=type=local,src=/tmp/.buildx-cache \
-          --cache-to=type=local,dest=/tmp/.buildx-cache-new,mode=max \
-          --output type=docker,dest=myvote.tar \
-          --platform=linux/arm64 --file=frontend/Dockerfile -t myvote .
-          gzip myvote.tar
-
       - name: Build MyVote-API (backend) Docker image
         env:
           PRODUCTION_BUILD: 'true'
@@ -75,6 +64,17 @@ jobs:
           --output type=docker,dest=myvote-api.tar \
           --platform=linux/arm64 --file=backend/Dockerfile -t myvote-api .
           gzip myvote-api.tar
+
+      - name: Build MyVote (frontend) Docker image
+        env:
+          PRODUCTION_BUILD: 'true'
+        run: |
+          docker buildx build \
+          --cache-from=type=local,src=/tmp/.buildx-cache \
+          --cache-to=type=local,dest=/tmp/.buildx-cache-new,mode=max \
+          --output type=docker,dest=myvote.tar \
+          --platform=linux/arm64 --file=frontend/Dockerfile -t myvote .
+          gzip myvote.tar
 
       - name: Save Docker cache
         if: success()
