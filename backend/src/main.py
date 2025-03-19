@@ -32,9 +32,15 @@ async def lifespan(app: FastAPI):
     # Code here is executed when the app is dying, use to clean things up
 
 
-# Create the FastAPI app, and pass the lifespan context manager
-app = FastAPI(title="Votes API", lifespan=lifespan)
+is_dev_mode = "dev"
 
+# Create the FastAPI app, and pass the lifespan context manager
+app = FastAPI(
+    docs_url="/docs" if is_dev_mode else None,
+    redoc_url="/redoc" if is_dev_mode else None,
+    title="Votes API",
+    lifespan=lifespan,
+)
 
 # Middleware setup for CORS
 app.add_middleware(
