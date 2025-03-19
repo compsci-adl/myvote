@@ -31,6 +31,11 @@ export default function VotingPage() {
 	const [statusMessage, setStatusMessage] = useState<string>('');
 	const [candidates, setCandidates] = useState<Record<number, Candidate[]>>({});
 
+	// Fetch student info from localStorage
+	const studentId = localStorage.getItem('student_id');
+	const studentName = localStorage.getItem('full_name');
+	const hasVoted = localStorage.getItem('hasVoted') === 'true';
+
 	// Fetch election data
 	const fetchElections = useSWRMutation('elections', fetcher.get.mutate, {
 		onSuccess: (data) => {
@@ -82,9 +87,14 @@ export default function VotingPage() {
 			onSuccess: (data) => {
 				setStatusMessage('Vote submitted successfully!');
 				setTimeout(() => setStatusMessage(''), 5000);
+				localStorage.setItem('hasVoted', 'true');
 			},
 			onError: (error) => {
-				setStatusMessage('Error submitting vote. Please try again.');
+				if (error.response?.status === 409) {
+					setStatusMessage('You have already voted.');
+				} else {
+					setStatusMessage('Error submitting vote. Please try again.');
+				}
 				setTimeout(() => setStatusMessage(''), 5000);
 			},
 		},
@@ -92,10 +102,10 @@ export default function VotingPage() {
 
 	// Handle form submit
 	const handleSubmit = async () => {
-		const randomStudentId = Math.floor(1000000 + Math.random() * 9000000); // Random 7-digit student ID
-		const randomName = `Student ${randomStudentId}`; // Random student name
-
-		console.log(candidates);
+		if (!studentId || !studentName) {
+			alert('Error: No student ID or name found. Please log in again.');
+			return;
+		}
 
 		// Prepare vote data using candidates data
 		const voteData = Object.keys(candidates).map((positionId) => ({
@@ -104,13 +114,11 @@ export default function VotingPage() {
 		}));
 
 		const voteRequest = {
-			student_id: randomStudentId,
+			student_id: parseInt(studentId, 10),
 			election: firstElection.id,
-			name: randomName,
+			name: studentName,
 			votes: voteData,
 		};
-
-		console.log(voteRequest);
 
 		// Trigger the vote submission with the formatted request
 		submitVote.trigger(voteRequest);
@@ -122,6 +130,10 @@ export default function VotingPage() {
 			{message ? (
 				<div className="flex min-h-screen items-center justify-center">
 					<p className="text-center text-xl">{message}</p>
+				</div>
+			) : hasVoted ? (
+				<div className="flex min-h-screen items-center justify-center">
+					<p className="text-center text-xl">You have already voted.</p>
 				</div>
 			) : (
 				<>
@@ -140,11 +152,13 @@ export default function VotingPage() {
 						/>
 					))}
 					<Divider />
-					<div className="mb-8 mt-8 flex justify-center">
-						<Button onPress={onOpen} className="bg-primary p-7 text-xl">
-							Submit
-						</Button>
-					</div>
+					{positions.length > 0 && (
+						<div className="mb-8 mt-8 flex justify-center">
+							<Button onPress={onOpen} className="bg-primary p-7 text-xl">
+								Submit
+							</Button>
+						</div>
+					)}
 					<Modal size="md" isOpen={isOpen} onClose={onClose}>
 						<ModalContent>
 							<ModalHeader>Are You Sure You Want to Submit?</ModalHeader>

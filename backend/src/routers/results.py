@@ -55,24 +55,20 @@ async def get_results(
         )
         winners_data = winners_query.scalars().all()
 
-        # Compute vote counts and rankings
-        votes = defaultdict(int)
-        for ballot in ballots:
-            for preference in ballot:
-                votes[preference] += 1
-
-        # Sort candidates by votes
-        sorted_candidates = sorted(
-            [(candidate_id, votes[candidate_id]) for candidate_id in candidates],
-            key=lambda x: x[1],
-            reverse=True,
-        )
-
-        # Get preferences count for each candidate
+        # Calculate preferences count per candidate (lower preferences are better)
         candidates_preferences = defaultdict(int)
         for ballot in ballots:
             for preference in ballot:
                 candidates_preferences[preference] += 1
+
+        # Sorting candidates by the number of preferences (lower is better)
+        sorted_candidates = sorted(
+            [
+                (candidate_id, candidates_preferences[candidate_id])
+                for candidate_id in candidates
+            ],
+            key=lambda x: x[1],  # Sorting by the preference count
+        )
 
         # Compile result
         result = {
@@ -92,7 +88,6 @@ async def get_results(
                     .scalars()
                     .first()
                     .name,
-                    "votes": votes.get(candidate_id, 0),
                     "preferences_count": candidates_preferences.get(candidate_id, 0),
                     "ranking": rank + 1,
                 }

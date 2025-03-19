@@ -17,7 +17,6 @@ export default function Results({ electionId }: ResultsProps) {
 		fetcher.get.mutate,
 		{
 			onSuccess: (data) => {
-				console.log(data.results);
 				setResults(data.results);
 			},
 		},
@@ -55,7 +54,6 @@ export default function Results({ electionId }: ResultsProps) {
 							<tr className="bg-gray-200">
 								<th className="border p-2">Ranking</th>
 								<th className="border p-2">Candidate</th>
-								<th className="border p-2">Votes</th>
 								<th className="border p-2">Preference Count</th>
 							</tr>
 						</thead>
@@ -64,7 +62,6 @@ export default function Results({ electionId }: ResultsProps) {
 								<tr key={candidate.id} className="text-center">
 									<td className="border p-2">{candidate.ranking}</td>
 									<td className="border p-2">{candidate.name}</td>
-									<td className="border p-2">{candidate.votes}</td>
 									<td className="border p-2">{candidate.preferences_count}</td>
 								</tr>
 							))}

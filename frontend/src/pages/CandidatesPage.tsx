@@ -23,7 +23,7 @@ export default function CandidatesPage() {
 		status?: number;
 	}>({});
 	const [candidates, setCandidates] = useState<Record<number, Candidate[]>>({});
-	const [positions, setPositions] = useState<Record<string, Position>>({}); // Store positions by string ID
+	const [positions, setPositions] = useState<Record<string, Position>>({});
 	const [message, setMessage] = useState('');
 	const [candidateLinks, setCandidateLinks] = useState<
 		{ candidate_id: string }[]
@@ -125,10 +125,6 @@ export default function CandidatesPage() {
 			) : (
 				<Accordion defaultExpandedKeys={focusedUsers}>
 					{(candidates[firstElection.id] ?? []).map((c) => {
-						console.log(candidateLinks);
-						console.log(c);
-						// Inside your CandidatesPage component
-
 						// Get positions for the candidate (loop through the candidateLinks and map to positions)
 						const candidatePositions = candidateLinks
 							.filter((link) => link.candidate_id === c.id) // Filter links where the candidate is nominated
@@ -137,18 +133,8 @@ export default function CandidatesPage() {
 								const positionId = link.position_id;
 								// Check if the position exists in the positions map
 								const position = positions[positionId];
-								// Debugging: Log the position ID and the position name
-								console.log(
-									`Position ID: ${positionId} | Position: ${position ? position.name : 'Unknown Position'}`,
-								);
-								// Return the position name, or 'Unknown Position' if it doesn't exist
 								return position ? position.name : 'Unknown Position';
 							});
-
-						// Debugging: Log the positions for the candidate
-						console.log(
-							`Candidate: ${c.name} | Nominated Positions: ${candidatePositions}`,
-						);
 
 						return (
 							<AccordionItem

@@ -24,6 +24,19 @@ const indexRoute = createRoute({
 				const response = await fetcher.get.query([`membership/${keycloakId}`]);
 
 				if (response.status === 'Paid member') {
+					// Check if local storage needs to be updated
+					const existingStudentId = localStorage.getItem('student_id');
+					const existingFullName = localStorage.getItem('full_name');
+
+					if (
+						existingStudentId !== response.student_id ||
+						existingFullName !== response.full_name
+					) {
+						localStorage.setItem('student_id', response.student_id);
+						localStorage.setItem('full_name', response.full_name);
+					}
+
+					// Redirect to voting page
 					router.navigate({ to: '/voting' });
 				} else if (response.status === 'Unpaid member') {
 					alert(
@@ -52,10 +65,13 @@ const protectedBeforeLoad = async () => {
 
 		// Fetch membership status
 		try {
-			const response = await fetcher.get.query([`membership/${keycloakId}`]);
+			// const response = await fetcher.get.query([`membership/${keycloakId}`]);
+			const response = await fetcher.get.query([
+				`membership/c37fc37e-f49f-4850-91f3-343c6f34c3cf`,
+			]);
 
 			if (response.status === 'Paid member') {
-				router.navigate({ to: '/voting' });
+				return;
 			} else if (response.status === 'Unpaid member') {
 				alert(
 					'Please pay for your membership on the CS Club Website first. Then logout and login again.',

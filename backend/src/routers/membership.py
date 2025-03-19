@@ -35,6 +35,8 @@ class User(SQLModel, table=True):
 # Pydantic model for response
 class MembershipStatus(BaseModel):
     status: str
+    student_id: str
+    full_name: str
 
 
 # Create a router to manage membership checks
@@ -79,10 +81,16 @@ def check_membership(
 
         if user:
             user = user[0]
+            student_id = user[7][1:]
+            full_name = f"{user[4]} {user[5]}"
             if user[13] == 1767225600:
-                return MembershipStatus(status="Paid member")
+                return MembershipStatus(
+                    status="Paid member", student_id=student_id, full_name=full_name
+                )
             else:
-                return MembershipStatus(status="Unpaid member")
+                return MembershipStatus(
+                    status="Unpaid member", student_id=student_id, full_name=full_name
+                )
         else:
             raise HTTPException(status_code=404, detail="User not found")
     except Exception as e:
