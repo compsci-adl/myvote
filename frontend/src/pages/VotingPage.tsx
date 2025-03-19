@@ -1,14 +1,20 @@
-import { Button, Divider, Modal, ModalHeader, ModalBody, useDisclosure, ModalContent, ModalFooter } from '@heroui/react';
+import {
+	Button,
+	Divider,
+	Modal,
+	ModalHeader,
+	ModalBody,
+	useDisclosure,
+	ModalContent,
+	ModalFooter,
+} from '@heroui/react';
 import { useState, useEffect } from 'react';
 import useSWRMutation from 'swr/mutation';
-
-
 
 import { PositionSection } from '../components/PositionSection';
 import { fetcher } from '../lib/fetcher';
 import type { Candidate } from '../types/candidate';
 import { useMount } from '../utils/mount';
-
 
 export default function VotingPage() {
 	const { isOpen, onOpen, onClose } = useDisclosure();
@@ -134,8 +140,8 @@ export default function VotingPage() {
 						/>
 					))}
 					<Divider />
-					<div className="flex justify-center">
-						<Button onPress={onOpen} className="bg-primary p-7 text-3xl">
+					<div className="mb-8 mt-8 flex justify-center">
+						<Button onPress={onOpen} className="bg-primary p-7 text-xl">
 							Submit
 						</Button>
 					</div>
