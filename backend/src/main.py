@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel
 
 from src.db import engine
-from src.routers import candidates, elections, membership, positions, votes
+from src.routers import candidates, elections, membership, positions, results, votes
 
 # Configure CORS for local development and production
 ORIGINS = [
@@ -56,3 +56,4 @@ app.include_router(candidates.router)
 app.include_router(elections.router)
 app.include_router(votes.router)
 app.include_router(membership.router)
+app.include_router(results.router)
