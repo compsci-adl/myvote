@@ -1,12 +1,6 @@
 # Use a Python image with uv pre-installed
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
-# Install Rust and Cargo
-RUN apt-get update && apt-get install -y curl && \
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && \
-    export PATH="$HOME/.cargo/bin:$PATH" && \
-    rustup default stable
-
 # Install the project into `/app`
 WORKDIR /app
 
@@ -16,16 +10,20 @@ ENV UV_COMPILE_BYTECODE=1
 # Copy from the cache instead of linking since it's a mounted volume
 ENV UV_LINK_MODE=copy
 
+# Install libsql-experimental as a binary to avoid Rust compilation
+RUN uv pip install libsql-experimental --only-binary :all:
+
 # Install the project's dependencies using the lockfile and settings
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=backend/uv.lock,target=uv.lock \
     --mount=type=bind,source=backend/pyproject.toml,target=pyproject.toml \
-    export PATH="$HOME/.cargo/bin:$PATH" && uv sync --frozen --no-install-project --no-dev
+    uv sync --frozen --no-install-project --no-dev
 
 # Then, add the rest of the project source code and install it
+# Installing separately from its dependencies allows optimal layer caching
 ADD . /app
 RUN --mount=type=cache,target=/root/.cache/uv \
-    export PATH="$HOME/.cargo/bin:$PATH" && uv sync --frozen --no-dev
+    uv sync --frozen --no-dev
 
 # Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"
