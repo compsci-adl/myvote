@@ -10,7 +10,10 @@ ENV UV_COMPILE_BYTECODE=1
 # Copy from the cache instead of linking since it's a mounted volume
 ENV UV_LINK_MODE=copy
 
-# Install libsql-experimental as a binary to avoid Rust compilation
+# Install minimal compilation tools (if needed)
+RUN apt-get update && apt-get install -y build-essential clang && rm -rf /var/lib/apt/lists/*
+
+# Ensure libsql-experimental is installed as a binary package
 RUN uv pip install libsql-experimental --only-binary :all:
 
 # Install the project's dependencies using the lockfile and settings
