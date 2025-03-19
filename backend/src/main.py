@@ -32,7 +32,7 @@ async def lifespan(app: FastAPI):
     # Code here is executed when the app is dying, use to clean things up
 
 
-is_dev_mode = "dev"
+is_dev_mode = ""
 
 # Create the FastAPI app, and pass the lifespan context manager
 app = FastAPI(
