@@ -136,8 +136,15 @@ const CandidateCard = memo(
 	},
 );
 
-export const PositionSection = ({ position }: { position: Position }) => {
-	const [candidates, setCandidates] = useState<Record<number, Candidate[]>>({});
+export const PositionSection = ({
+	position,
+	candidates,
+	setCandidates,
+}: {
+	position: Position;
+	candidates: Record<number, Candidate[]>;
+	setCandidates: (candidates: Record<number, Candidate[]>) => void;
+}) => {
 	const [electionId, setElectionId] = useState<string | null>(null);
 	const [candidateLinks, setCandidateLinks] = useState<
 		{ candidate_id: string }[]
@@ -200,7 +207,7 @@ export const PositionSection = ({ position }: { position: Position }) => {
 			);
 
 			const filteredCandidates = candidatesData.candidates.filter((candidate) =>
-				nominationMap[(position.id)]?.includes((candidate.id)),
+				nominationMap[position.id]?.includes(candidate.id),
 			);
 
 			setCandidates((prev) => ({

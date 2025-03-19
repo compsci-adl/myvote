@@ -1,19 +1,14 @@
-import {
-	Button,
-	Divider,
-	Modal,
-	ModalHeader,
-	ModalBody,
-	useDisclosure,
-	ModalContent,
-	ModalFooter,
-} from '@heroui/react';
+import { Button, Divider, Modal, ModalHeader, ModalBody, useDisclosure, ModalContent, ModalFooter } from '@heroui/react';
 import { useState, useEffect } from 'react';
 import useSWRMutation from 'swr/mutation';
 
+
+
 import { PositionSection } from '../components/PositionSection';
 import { fetcher } from '../lib/fetcher';
+import type { Candidate } from '../types/candidate';
 import { useMount } from '../utils/mount';
+
 
 export default function VotingPage() {
 	const { isOpen, onOpen, onClose } = useDisclosure();
@@ -23,20 +18,24 @@ export default function VotingPage() {
 		name: string;
 	}
 
-	const [firstElection, setFirstElection] = useState([]);
+	const [firstElection, setFirstElection] = useState<any>([]);
 	const [positions, setPositions] = useState<Position[]>([]);
 	const [message, setMessage] = useState('');
+	const [positionVotes, setPositionVotes] = useState<any[]>([]); // Track votes for positions
+	const [statusMessage, setStatusMessage] = useState<string>('');
+	const [candidates, setCandidates] = useState<Record<number, Candidate[]>>({});
 
+	// Fetch election data
 	const fetchElections = useSWRMutation('elections', fetcher.get.mutate, {
 		onSuccess: (data) => {
 			const firstElection = data.elections?.[0];
-
 			if (firstElection) {
 				setFirstElection(firstElection);
 			}
 		},
 	});
 
+	// Fetch positions for the first election
 	const fetchPositions = useSWRMutation(
 		`positions/${firstElection.id}`,
 		fetcher.get.mutate,
@@ -47,6 +46,7 @@ export default function VotingPage() {
 		},
 	);
 
+	// Fetch election and positions when the component mounts
 	useMount(() => {
 		fetchElections.trigger();
 	});
@@ -68,6 +68,49 @@ export default function VotingPage() {
 		}
 	}, [firstElection, fetchPositions, positions]);
 
+	// Handle submit vote
+	const submitVote = useSWRMutation(
+		`votes/${firstElection.id}`,
+		fetcher.post.mutate,
+		{
+			onSuccess: (data) => {
+				setStatusMessage('Vote submitted successfully!');
+				setTimeout(() => setStatusMessage(''), 5000);
+			},
+			onError: (error) => {
+				setStatusMessage('Error submitting vote. Please try again.');
+				setTimeout(() => setStatusMessage(''), 5000);
+			},
+		},
+	);
+
+	// Handle form submit
+	const handleSubmit = async () => {
+		const randomStudentId = Math.floor(1000000 + Math.random() * 9000000); // Random 7-digit student ID
+		const randomName = `Student ${randomStudentId}`; // Random student name
+
+		console.log(candidates);
+
+		// Prepare vote data using candidates data
+		const voteData = Object.keys(candidates).map((positionId) => ({
+			position: positionId,
+			preferences: candidates[positionId].map((candidate) => candidate.id),
+		}));
+
+		const voteRequest = {
+			student_id: randomStudentId,
+			election: firstElection.id,
+			name: randomName,
+			votes: voteData,
+		};
+
+		console.log(voteRequest);
+
+		// Trigger the vote submission with the formatted request
+		submitVote.trigger(voteRequest);
+		onClose();
+	};
+
 	return (
 		<>
 			{message ? (
@@ -76,8 +119,19 @@ export default function VotingPage() {
 				</div>
 			) : (
 				<>
-					{positions.map((p, i) => (
-						<PositionSection key={i} position={p} />
+					{positions.map((position, index) => (
+						<PositionSection
+							key={index}
+							position={position}
+							onSelectVote={(selectedCandidates) =>
+								setPositionVotes((prev) => [
+									...prev,
+									{ position_id: position.id, selectedCandidates },
+								])
+							}
+							candidates={candidates}
+							setCandidates={setCandidates}
+						/>
 					))}
 					<Divider />
 					<div className="flex justify-center">
@@ -96,10 +150,16 @@ export default function VotingPage() {
 							</ModalBody>
 							<Divider />
 							<ModalFooter className="justify-center">
-								<Button>Submit</Button>
+								<Button onPress={handleSubmit}>Submit</Button>
 							</ModalFooter>
 						</ModalContent>
 					</Modal>
+
+					{statusMessage && (
+						<div className="status-message">
+							<p>{statusMessage}</p>
+						</div>
+					)}
 				</>
 			)}
 		</>
