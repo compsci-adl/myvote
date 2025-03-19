@@ -1,8 +1,6 @@
 name: Linting and Formatting Checks
 on:
-  pull_request_target:
-    branches:
-      - main
+  workflow_call:
 
 jobs:
   frontend:
