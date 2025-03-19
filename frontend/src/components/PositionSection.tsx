@@ -1,15 +1,15 @@
-import { Button, Card, CardBody, CardFooter, Divider } from '@heroui/react';
+import { Card, CardBody } from '@heroui/react';
 import clsx from 'clsx';
 import { motion } from 'framer-motion';
-import { useState, useRef, memo } from 'react';
+import { useState, useRef, memo, useEffect } from 'react';
+import useSWRMutation from 'swr/mutation';
 import { create } from 'zustand';
 
-import { refs } from '../constants/refs';
-import { useCandidateStore, useFocusedUsers, useSelectedTab } from '../stores';
+import { fetcher } from '../lib/fetcher';
 import type { Candidate } from '../types/candidate';
 import type { Position } from '../types/position';
-import { TabType } from '../types/tab';
 import { useDND } from '../utils/dnd';
+import { useMount } from './../hooks/use-mount';
 
 type DraggingCandidateState = {
 	isDragging: boolean;
@@ -17,171 +17,229 @@ type DraggingCandidateState = {
 	start: (candidate: CandidateIndividual) => void;
 	stop: () => void;
 };
+
 const useDraggingCandidate = create<DraggingCandidateState>((set) => ({
 	isDragging: false,
 	candidate: null,
 	start: (candidate) => {
-		set({ isDragging: true, candidate: candidate });
+		set({ isDragging: true, candidate });
 	},
 	stop: () => set({ isDragging: false, candidate: null }),
 }));
 
-// We need the position for some additional checks (one candidate can have multiple cards across positions)
 type CandidateIndividual = Candidate & { position: Position };
 
 type CandidateCardProps = {
-	i: number;
+	i: string;
 	c: CandidateIndividual;
-	candidates: Candidate[][];
-	setCandidates: (candidates: Candidate[][]) => void;
+	candidates: Record<number, Candidate[]>;
+	setCandidates: (candidates: Record<number, Candidate[]>) => void;
 };
-// We can memoize the component to save some time when rerendering (skip rendering if props arent changed)
-const CandidateCard = memo((props: CandidateCardProps) => {
-	const { setFocusedUsers } = useFocusedUsers();
-	const { setSelectedTab } = useSelectedTab();
-	const ref = useRef(null);
-	const draggingCandidate = useDraggingCandidate();
-	const [isDraggedOver, setIsDraggedOver] = useState(false);
-	const [isDragging, setIsDragging] = useState(false);
-	useDND(
-		ref,
-		{
-			onDragStart: () => {
-				setIsDragging(true);
-				draggingCandidate.start(props.c);
+
+const CandidateCard = memo(
+	({ i, c, candidates, setCandidates }: CandidateCardProps) => {
+		const ref = useRef<HTMLDivElement>(null);
+		const draggingCandidate = useDraggingCandidate();
+		const [isDraggedOver, setIsDraggedOver] = useState(false);
+		const [isDragging, setIsDragging] = useState(false);
+
+		useDND(
+			ref,
+			{
+				onDragStart: () => {
+					setIsDragging(true);
+					draggingCandidate.start(c);
+				},
+				onDrop: () => {
+					setIsDragging(false);
+				},
 			},
-			onDrop: () => {
-				setIsDragging(false);
+			{
+				onDragEnter: () => {
+					const dc = useDraggingCandidate.getState();
+					if (
+						dc.candidate &&
+						dc.candidate.id !== c.id &&
+						dc.candidate.position.id === c.position.id
+					) {
+						setIsDraggedOver(true);
+					}
+				},
+				onDragLeave: () => {
+					setIsDraggedOver(false);
+				},
+				canDrop: () => {
+					const dc = useDraggingCandidate.getState();
+					return dc.candidate?.position.id === c.position.id;
+				},
+				onDrop: () => {
+					setIsDraggedOver(false);
+					const dc = useDraggingCandidate.getState();
+					if (!dc.candidate) return;
+
+					const positionId = c.position.id;
+					if (!candidates[positionId]) return;
+
+					const updatedCandidates = { ...candidates };
+					const res = [...(updatedCandidates[positionId] || [])];
+
+					const draggedIndex = res.findIndex((x) => x.id === dc.candidate?.id);
+					const targetIndex = res.findIndex((x) => x.id === c.id);
+
+					if (draggedIndex !== -1 && targetIndex !== -1) {
+						const [movedCandidate] = res.splice(draggedIndex, 1);
+						res.splice(targetIndex, 0, movedCandidate);
+					}
+
+					updatedCandidates[positionId] = res;
+					setCandidates(updatedCandidates);
+				},
 			},
+			[candidates],
+		);
+
+		return (
+			<motion.div
+				transition={{
+					type: 'spring',
+					damping: 30,
+					stiffness: 300,
+				}}
+				layout
+				key={c.id}
+			>
+				<div ref={ref}>
+					<Card
+						className={clsx(
+							isDraggedOver && 'translate-x-3',
+							isDraggedOver && 'rotate-1',
+							'm-3 bg-primary-100 p-3',
+							isDragging && 'opacity-50',
+						)}
+					>
+						{i === 0 ? (
+							<p>🥇</p>
+						) : i === 1 ? (
+							<p>🥈</p>
+						) : i === 2 ? (
+							<p>🥉</p>
+						) : (
+							<p>{i + 1}</p>
+						)}
+						<CardBody className="text-center">
+							<h6>{c.name}</h6>
+						</CardBody>
+					</Card>
+				</div>
+			</motion.div>
+		);
+	},
+);
+
+export const PositionSection = ({
+	position,
+	candidates,
+	setCandidates,
+}: {
+	position: Position;
+	candidates: Record<number, Candidate[]>;
+	setCandidates: (candidates: Record<number, Candidate[]>) => void;
+}) => {
+	const [electionId, setElectionId] = useState<string | null>(null);
+	const [candidateLinks, setCandidateLinks] = useState<
+		{ candidate_id: string }[]
+	>([]);
+
+	const fetchElections = useSWRMutation('elections', fetcher.get.mutate, {
+		onSuccess: (data) => {
+			const firstElection = data.elections?.[0];
+			if (firstElection) {
+				setElectionId(firstElection.id);
+			}
 		},
+	});
+
+	const fetchCandidates = useSWRMutation(
+		electionId ? `candidates/${electionId}` : null,
+		fetcher.get.mutate,
 		{
-			onDragEnter: () => {
-				const dc = useDraggingCandidate.getState();
-				if (
-					dc.candidate !== props.c &&
-					dc.candidate?.position === props.c.position
-				)
-					setIsDraggedOver(true);
+			onSuccess: (data) => {
+				if (Array.isArray(data.candidates)) {
+					setCandidates((prev) => ({
+						...prev,
+						[position.id]: data.candidates,
+					}));
+				}
 			},
-			onDragLeave: () => {
-				setIsDraggedOver(false);
-			},
-			canDrop: () => {
-				const dc = useDraggingCandidate.getState();
-				return dc.candidate?.position === props.c.position;
-			},
-			onDrop: () => {
-				setIsDraggedOver(false);
-				const dc = useDraggingCandidate.getState();
-				const resAll = [...props.candidates];
-				const res = [...props.candidates[props.c.position.id]];
-				const id1 = props.candidates[props.c.position.id].findIndex(
-					(x) => x.id === dc.candidate?.id,
-				);
-				res.splice(id1, 1);
-				const id2 = props.candidates[props.c.position.id].findIndex(
-					(x) => x.id === props.c.id,
-				);
-				res.splice(id2, 0, dc.candidate as Candidate);
-				// res[id1] = props.c as Candidate;
-				// res[id2] = dc.candidate as Candidate;
-				resAll[props.c.position.id] = res;
-				props.setCandidates(resAll);
-			},
+			onError: (error) => console.error('Error fetching candidates:', error),
 		},
-		[props.candidates],
 	);
-	return (
-		<motion.div
-			transition={{
-				type: 'spring',
-				damping: 30,
-				stiffness: 300,
-			}}
-			layout
-			key={props.c.id}
-		>
-			<div ref={ref}>
-				{/* TODO: change useDND hook so y cord is known */}
-				<Card
-					className={clsx(
-						isDraggedOver && 'translate-x-3',
-						isDraggedOver && 'rotate-1',
-						'm-3 bg-primary-100 p-3',
-						isDragging && 'opacity-50',
-					)}
-				>
-					{props.i === 0 ? (
-						<p>🥇</p>
-					) : props.i === 1 ? (
-						<p>🥈</p>
-					) : props.i === 2 ? (
-						<p>🥉</p>
-					) : props.i < 6 ? (
-						<p>{props.i + 1}</p>
-					) : (
-						<></>
-					)}
-					<CardBody className="text-center">
-						<h6>{props.c.name}</h6>
-					</CardBody>
-					<Divider />
-					<CardFooter className="justify-center">
-						<Button
-							size="sm"
-							isIconOnly={true}
-							variant="flat"
-							color="primary"
-							className="text-xl"
-							onClick={() => {
-								// Update focused user to this one
-								setFocusedUsers([props.c.id.toString()]);
 
-								// Change tab and reset to top
-								setSelectedTab(TabType.Candidates);
-								window.scrollTo(0, 0);
-
-								// Set timeout to scroll to our desired location
-								// TODO: seek feedback on this implementation, and whether 'smooth' or 'instant' is better.
-								setTimeout(
-									() =>
-										refs?.current
-											.get(props.c.id)
-											?.scrollIntoView({ block: 'center', behavior: 'smooth' }),
-									0,
-								);
-							}}
-						>
-							📝
-						</Button>
-					</CardFooter>
-				</Card>
-			</div>
-		</motion.div>
+	const fetchCandidateLinks = useSWRMutation(
+		`candidate_position_links/${electionId}`,
+		fetcher.get.mutate,
+		{
+			onSuccess: (data) => setCandidateLinks(data.candidate_position_links),
+		},
 	);
-});
 
-export const PositionSection = (props: { position: Position }) => {
-	const { candidates, setCandidates } = useCandidateStore();
+	useMount(() => {
+		fetchElections.trigger();
+	});
+	useEffect(() => {
+		if (!electionId) return;
+
+		Promise.all([
+			fetchCandidateLinks.trigger(),
+			fetchCandidates.trigger(),
+		]).then(([candidateLinksData, candidatesData]) => {
+			if (!candidatesData || !Array.isArray(candidatesData.candidates)) {
+				return;
+			}
+
+			const nominationMap = candidateLinksData.candidate_position_links.reduce(
+				(acc, link) => {
+					if (!acc[link.position_id]) acc[link.position_id] = [];
+					acc[link.position_id].push(link.candidate_id);
+					return acc;
+				},
+				{} as Record<number, string[]>,
+			);
+
+			const filteredCandidates = candidatesData.candidates.filter((candidate) =>
+				nominationMap[position.id]?.includes(candidate.id),
+			);
+
+			setCandidates((prev) => ({
+				...prev,
+				[position.id]: filteredCandidates,
+			}));
+		});
+	}, [electionId]);
+
 	return (
 		<>
 			<div className="relative flex items-center py-5">
 				<div className="flex-grow border-t border-gray-400"></div>
 				<span className="mx-4 flex-shrink text-lg font-bold">
-					{props.position.name}
+					{position.name}
 				</span>
 				<div className="flex-grow border-t border-gray-400"></div>
 			</div>
 			<div className="grid grid-cols-[repeat(auto-fill,minmax(100px,250px))] items-center justify-center">
-				{candidates[props.position.id].map((c, i) => (
-					<CandidateCard
-						i={i}
-						candidates={candidates}
-						setCandidates={setCandidates}
-						key={c.id}
-						c={{ ...c, position: props.position }}
-					/>
-				))}
+				{candidates[position.id] && candidates[position.id].length > 0 ? (
+					candidates[position.id].map((c, i) => (
+						<CandidateCard
+							key={c.id}
+							i={i}
+							c={{ ...c, position }}
+							candidates={candidates}
+							setCandidates={setCandidates}
+						/>
+					))
+				) : (
+					<p className="text-center">No candidates available</p>
+				)}
 			</div>
 		</>
 	);

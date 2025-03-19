@@ -59,25 +59,25 @@ async def create_position(
 
 
 # TODO: Authenticated as administrator
-@router.delete("/positions/{election_id}/{position_id}")
-async def delete_position(
-    election_id: int,
-    position_id: int,
-    session: AsyncSession = Depends(get_async_session),
-):
-    # election_id is not needed but kept for api route consistency
-    query = select(Position).where(Position.id == position_id)
-    result = await session.execute(query)
-    if result is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No position with that ID exists.",
-        )
-    await session.delete(result.one())
-    await session.commit()
+# @router.delete("/positions/{election_id}/{position_id}")
+# async def delete_position(
+#     election_id: int,
+#     position_id: int,
+#     session: AsyncSession = Depends(get_async_session),
+# ):
+#     # election_id is not needed but kept for api route consistency
+#     query = select(Position).where(Position.id == position_id)
+#     result = await session.execute(query)
+#     if result is None:
+#         raise HTTPException(
+#             status_code=status.HTTP_400_BAD_REQUEST,
+#             detail="No position with that ID exists.",
+#         )
+#     await session.delete(result.one())
+#     await session.commit()
 
-    # TODO: Standardise messaging for when no data needs to be returned?
-    return {"message": "Position successfully deleted."}
+#     # TODO: Standardise messaging for when no data needs to be returned?
+#     return {"message": "Position successfully deleted."}
 
 
 class PositionPatch(BaseModel):
@@ -88,30 +88,30 @@ class PositionPatch(BaseModel):
 
 
 # TODO: Admin auth
-@router.patch("/positions/{election_id}/{position_id}")
-async def update_position(
-    election_id: int,
-    position_id: int,
-    req: PositionPatch,
-    session: AsyncSession = Depends(get_async_session),
-):
-    position = await session.execute(select(Position).where(Position.id == position_id))
-    if position is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No position with that ID exists.",
-        )
-    position = position.one()
-    if req.name is not None:
-        position.name = req.name
-    if req.vacancies is not None:
-        position.vacancies = req.vacancies
-    if req.description is not None:
-        position.description = req.description
-    if req.executive is not None:
-        position.executive = req.executive
+# @router.patch("/positions/{election_id}/{position_id}")
+# async def update_position(
+#     election_id: int,
+#     position_id: int,
+#     req: PositionPatch,
+#     session: AsyncSession = Depends(get_async_session),
+# ):
+#     position = await session.execute(select(Position).where(Position.id == position_id))
+#     if position is None:
+#         raise HTTPException(
+#             status_code=status.HTTP_400_BAD_REQUEST,
+#             detail="No position with that ID exists.",
+#         )
+#     position = position.one()
+#     if req.name is not None:
+#         position.name = req.name
+#     if req.vacancies is not None:
+#         position.vacancies = req.vacancies
+#     if req.description is not None:
+#         position.description = req.description
+#     if req.executive is not None:
+#         position.executive = req.executive
 
-    session.add(position)
-    await session.commit()
+#     session.add(position)
+#     await session.commit()
 
-    return position
+#     return position

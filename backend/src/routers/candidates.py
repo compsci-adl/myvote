@@ -75,3 +75,18 @@ async def create_candidates(
         await session.refresh(candidate)
 
     return {"candidates": candidates}
+
+
+@router.get("/candidate_position_links/{election_id}")
+async def get_candidate_position_links(
+    election_id: int, session=Depends(get_async_session)
+):
+    query = (
+        select(CandidatePositionLink)
+        .join(Candidate)
+        .where(Candidate.election == election_id)
+    )
+    result = await session.execute(query)
+    result = result.scalars().all()
+
+    return {"candidate_position_links": result}

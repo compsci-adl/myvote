@@ -102,58 +102,58 @@ async def create_election(
     return election
 
 
-@router.patch("/elections/{election_id}")
-async def update_election(
-    election_id: str,
-    req: UpdateElectionRequest,
-    session: AsyncSession = Depends(get_async_session),
-) -> Election:
-    election_query = select(Election).where(Election.id == election_id)
-    election_result = await session.execute(election_query)
-    election = election_result.scalar()
+# @router.patch("/elections/{election_id}")
+# async def update_election(
+#     election_id: str,
+#     req: UpdateElectionRequest,
+#     session: AsyncSession = Depends(get_async_session),
+# ) -> Election:
+#     election_query = select(Election).where(Election.id == election_id)
+#     election_result = await session.execute(election_query)
+#     election = election_result.scalar()
 
-    if election is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Election not found.",
-        )
+#     if election is None:
+#         raise HTTPException(
+#             status_code=status.HTTP_404_NOT_FOUND,
+#             detail="Election not found.",
+#         )
 
-    update_fields = {
-        "name": req.name,
-        "nomination_start": req.nomination_start,
-        "nomination_end": req.nomination_end,
-        "voting_start": req.voting_start,
-        "voting_end": req.voting_end,
-        "status": req.status,
-    }
+#     update_fields = {
+#         "name": req.name,
+#         "nomination_start": req.nomination_start,
+#         "nomination_end": req.nomination_end,
+#         "voting_start": req.voting_start,
+#         "voting_end": req.voting_end,
+#         "status": req.status,
+#     }
 
-    for field, value in update_fields.items():
-        if value is not None:
-            setattr(election, field, value)
+#     for field, value in update_fields.items():
+#         if value is not None:
+#             setattr(election, field, value)
 
-    if req.positions is not None:
-        for position_req in req.positions:
-            position_query = select(Position).where(
-                Position.name == position_req.name, Position.election_id == election.id
-            )
-            position_result = await session.execute(position_query)
-            position = position_result.scalar()
+#     if req.positions is not None:
+#         for position_req in req.positions:
+#             position_query = select(Position).where(
+#                 Position.name == position_req.name, Position.election_id == election.id
+#             )
+#             position_result = await session.execute(position_query)
+#             position = position_result.scalar()
 
-            if position is None:
-                position = Position(
-                    election_id=election.id,
-                    name=position_req.name,
-                    vacancies=position_req.vacancies,
-                    description=position_req.description,
-                    executive=position_req.executive,
-                )
-                session.add(position)
-            else:
-                position.vacancies = position_req.vacancies
-                position.description = position_req.description
-                position.executive = position_req.executive
+#             if position is None:
+#                 position = Position(
+#                     election_id=election.id,
+#                     name=position_req.name,
+#                     vacancies=position_req.vacancies,
+#                     description=position_req.description,
+#                     executive=position_req.executive,
+#                 )
+#                 session.add(position)
+#             else:
+#                 position.vacancies = position_req.vacancies
+#                 position.description = position_req.description
+#                 position.executive = position_req.executive
 
-    await session.commit()
-    await session.refresh(election)
+#     await session.commit()
+#     await session.refresh(election)
 
-    return election
+#     return election
