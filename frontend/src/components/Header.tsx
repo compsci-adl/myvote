@@ -9,7 +9,9 @@ import {
 } from '@heroui/react';
 import { useRouter, useMatchRoute } from '@tanstack/react-router';
 import clsx from 'clsx';
+import { useState, useEffect } from 'react';
 
+import { fetcher } from '../lib/fetcher';
 import { useDarkMode } from '../utils/dark-mode';
 import { useOidc } from './../oidc';
 
@@ -24,6 +26,7 @@ const HEADER_BUTTON_PROPS = {
 export const Header = () => {
 	const { isDarkMode, toggleIsDarkMode } = useDarkMode();
 	const { isUserLoggedIn, initializationError, tokens } = useOidc();
+	const [isPaidMember, setIsPaidMember] = useState(false);
 	const router = useRouter();
 	const matchRoute = useMatchRoute();
 
@@ -39,65 +42,100 @@ export const Header = () => {
 		}
 	};
 
+	// Fetch membership status when user logs in
+	useEffect(() => {
+		const fetchMembershipStatus = async () => {
+			if (isUserLoggedIn) {
+				const keycloakId = tokens?.decodedIdToken.sub;
+				try {
+					// Fetch membership status
+					const response = await fetcher.get.query([
+						`membership/${keycloakId}`,
+					]);
+
+					if (response.status === 'Paid member') {
+						setIsPaidMember(true);
+					} else {
+						setIsPaidMember(false);
+					}
+				} catch (error) {
+					setIsPaidMember(false);
+				}
+			}
+		};
+
+		fetchMembershipStatus();
+	}, [isUserLoggedIn, tokens]);
+
 	return (
-		<Navbar
-			isBordered
-			maxWidth="xl"
-			position="static"
-			classNames={{ wrapper: 'px-4' }}
-		>
-			<NavbarBrand>
-				<img src="/favicon.svg" alt="Logo" className="mr-2 w-6" />
-				<h1 className="font-bold text-inherit">MyVote</h1>
-			</NavbarBrand>
+		<div className="flex h-full flex-col">
+			<Navbar
+				maxWidth="xl"
+				position="static"
+				classNames={{ wrapper: 'px-4' }}
+				{...(isPaidMember ? {} : { isBordered: true })}
+			>
+				<NavbarBrand>
+					<img src="/favicon.svg" alt="Logo" className="mr-2 w-6" />
+					<h1 className="font-bold text-inherit">MyVote</h1>
+				</NavbarBrand>
 
-			<NavbarContent justify="center">
-				{isUserLoggedIn && (
-					<ButtonGroup>
-						<Button
-							className={clsx({ 'bg-primary': isActive('/voting') })}
-							onPress={() => router.navigate({ to: '/voting' })}
-						>
-							Voting
-						</Button>
-						<Button
-							className={clsx({ 'bg-primary': isActive('/candidates') })}
-							onPress={() => router.navigate({ to: '/candidates' })}
-						>
-							Candidates
-						</Button>
-						{isAdmin() && (
-							<Button
-								className={clsx({ 'bg-primary': isActive('/admin') })}
-								onPress={() => router.navigate({ to: '/admin' })}
-							>
-								Admin
+				<NavbarContent justify="end" className="flex items-center gap-4">
+					{initializationError && (
+						<span className="text-red-500">
+							{initializationError.isAuthServerLikelyDown
+								? 'Auth server is down'
+								: `Auth Error: ${initializationError.message}`}
+						</span>
+					)}
+
+					{isUserLoggedIn ? <LoggedInAuthButton /> : <NotLoggedInAuthButton />}
+
+					<NavbarItem>
+						<Tooltip content="Toggle Dark Mode" size="sm">
+							<Button {...HEADER_BUTTON_PROPS} onPress={toggleIsDarkMode}>
+								{isDarkMode ? '🌚' : '🌞'}
 							</Button>
-						)}
-					</ButtonGroup>
-				)}
-			</NavbarContent>
+						</Tooltip>
+					</NavbarItem>
+				</NavbarContent>
+			</Navbar>
 
-			<NavbarContent justify="end">
-				{initializationError && (
-					<span className="text-red-500">
-						{initializationError.isAuthServerLikelyDown
-							? 'Auth server is down'
-							: `Auth Error: ${initializationError.message}`}
-					</span>
-				)}
-
-				{isUserLoggedIn ? <LoggedInAuthButton /> : <NotLoggedInAuthButton />}
-
-				<NavbarItem>
-					<Tooltip content="Toggle Dark Mode" size="sm">
-						<Button {...HEADER_BUTTON_PROPS} onPress={toggleIsDarkMode}>
-							{isDarkMode ? '🌚' : '🌞'}
-						</Button>
-					</Tooltip>
-				</NavbarItem>
-			</NavbarContent>
-		</Navbar>
+			{/* Show tab bar only for paid members */}
+			{isPaidMember && (
+				<Navbar
+					isBordered
+					maxWidth="xl"
+					position="static"
+					classNames={{ wrapper: 'px-4' }}
+				>
+					<NavbarContent justify="center" className="w-full">
+						<ButtonGroup className="mx-auto">
+							<Button
+								className={clsx({ 'bg-primary': isActive('/voting') })}
+								onPress={() => router.navigate({ to: '/voting' })}
+							>
+								Voting
+							</Button>
+							<Button
+								className={clsx({ 'bg-primary': isActive('/candidates') })}
+								onPress={() => router.navigate({ to: '/candidates' })}
+							>
+								Candidates
+							</Button>
+							{isAdmin() && (
+								<Button
+									className={clsx({ 'bg-primary': isActive('/admin') })}
+									onPress={() => router.navigate({ to: '/admin' })}
+								>
+									Admin
+								</Button>
+							)}
+						</ButtonGroup>
+					</NavbarContent>
+				</Navbar>
+			)}
+		</div>
 	);
 };
 

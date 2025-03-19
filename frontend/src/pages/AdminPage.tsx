@@ -18,6 +18,7 @@ import OpenNominations from '../components/OpenNominations';
 import OpenVoting from '../components/OpenVoting';
 import { setRefs } from '../constants/refs';
 import type { ElectionStatus } from '../types/ElectionStatus';
+import Results from './../components/Results';
 
 export default function AdminSection() {
 	const r = useRef(new Map());
@@ -169,7 +170,9 @@ export default function AdminSection() {
 					electionId={selectedElection.id}
 				/>
 			)}
-			{sliderValue === 6 && <div>Release Results Content</div>}
+			{sliderValue === 6 && selectedElection && (
+				<Results electionId={selectedElection.id} />
+			)}
 			<Modal isOpen={isOpen} onOpenChange={onOpenChange}>
 				<ModalContent>
 					{() => (
