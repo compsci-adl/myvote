@@ -6,15 +6,13 @@ services:
     ports:
       - "4040:4040"
     volumes:
-      - .:/app
+      -  ~/myvote/db:/app
     environment:
       - UV_COMPILE_BYTECODE=1
-    depends_on:
-      - database
 
   frontend:
     build:
-      context: ./frontend
+      context: ./frontend 
       dockerfile: Dockerfile
     ports:
       - "4000:4000"
@@ -22,9 +20,3 @@ services:
       - ./frontend:/app
     depends_on:
       - backend
-
-  database:
-    image: sqlite:latest
-    volumes:
-      - ./backend/dump.sql:/data/dump.sql
-    restart: always
