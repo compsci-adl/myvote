@@ -36,7 +36,7 @@ export const Header = () => {
 		if (!tokens) return false;
 		try {
 			const decodedToken = JSON.parse(atob(tokens.accessToken.split('.')[1]));
-			return decodedToken?.realm_access?.roles.includes('restricted-access');
+			return decodedToken?.realm_access?.roles.includes('admin');
 		} catch {
 			return false;
 		}
