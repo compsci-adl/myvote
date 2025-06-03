@@ -1,18 +1,18 @@
 services:
   backend:
-    build: 
+    build:
       context: .
       dockerfile: Dockerfile
     ports:
       - "4040:4040"
     volumes:
-      -  ~/myvote/db:/app
+      - ~/myvote/db:/app
     environment:
       - UV_COMPILE_BYTECODE=1
 
   frontend:
     build:
-      context: ./frontend 
+      context: ./frontend
       dockerfile: Dockerfile
     ports:
       - "4000:4000"

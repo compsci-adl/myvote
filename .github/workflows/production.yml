@@ -56,7 +56,7 @@ jobs:
 
       - name: Build MyVote-API (backend) Docker image
         env:
-          PRODUCTION_BUILD: 'true'
+          PRODUCTION_BUILD: "true"
         run: |
           docker buildx build \
           --cache-from=type=local,src=/tmp/.buildx-cache \
@@ -67,7 +67,7 @@ jobs:
 
       - name: Build MyVote (frontend) Docker image
         env:
-          PRODUCTION_BUILD: 'true'
+          PRODUCTION_BUILD: "true"
         run: |
           docker buildx build \
           --cache-from=type=local,src=/tmp/.buildx-cache \
