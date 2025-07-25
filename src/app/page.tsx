@@ -1,43 +1,54 @@
-import { Button } from "@heroui/react";
+import { Code } from '@heroui/code';
+import { Link } from '@heroui/link';
+import { Snippet } from '@heroui/snippet';
+import { button as buttonStyles } from '@heroui/theme';
 
-// import { useOidc } from './../oidc';
+import { GithubIcon } from '@/components/icons';
+import { subtitle, title } from '@/components/primitives';
+import { siteConfig } from '@/config/site';
 
 export default function Home() {
-  // const { isUserLoggedIn } = useOidc();
-  return (
-    <div className="flex min-h-screen flex-col items-center justify-center">
-      <img src="/favicon.svg" alt="MyVote Logo" className="mb-4 h-24 w-24" />
-      <h1 className="mb-4 text-4xl font-bold">Welcome to MyVote</h1>
-      <p className="mb-8 text-lg">
-        The Computer Science Club's new voting system!
-      </p>
-      {/* {isUserLoggedIn ? <LoggedInAuthButton /> : <NotLoggedInAuthButton />} */}
-    </div>
-  );
+    return (
+        <section className="flex flex-col items-center justify-center gap-4 py-8 md:py-10">
+            <div className="inline-block max-w-xl justify-center text-center">
+                <span className={title()}>Make&nbsp;</span>
+                <span className={title({ color: 'violet' })}>beautiful&nbsp;</span>
+                <br />
+                <span className={title()}>websites regardless of your design experience.</span>
+                <div className={subtitle({ class: 'mt-4' })}>
+                    Beautiful, fast and modern React UI library.
+                </div>
+            </div>
+
+            <div className="flex gap-3">
+                <Link
+                    isExternal
+                    className={buttonStyles({
+                        color: 'primary',
+                        radius: 'full',
+                        variant: 'shadow',
+                    })}
+                    href={siteConfig.links.docs}
+                >
+                    Documentation
+                </Link>
+                <Link
+                    isExternal
+                    className={buttonStyles({ variant: 'bordered', radius: 'full' })}
+                    href={siteConfig.links.github}
+                >
+                    <GithubIcon size={20} />
+                    GitHub
+                </Link>
+            </div>
+
+            <div className="mt-8">
+                <Snippet hideCopyButton hideSymbol variant="bordered">
+                    <span>
+                        Get started by editing <Code color="primary">app/page.tsx</Code>
+                    </span>
+                </Snippet>
+            </div>
+        </section>
+    );
 }
-
-// const LoggedInAuthButton = () => {
-//     const { logout } = useOidc({ assert: 'user logged in' });
-
-//     return (
-//         <div className="flex items-center gap-2">
-//             <Button
-//                 color="primary"
-//                 size="lg"
-//                 onPress={() => logout({ redirectTo: 'home' })}
-//             >
-//                 Logout
-//             </Button>
-//         </div>
-//     );
-// };
-
-// const NotLoggedInAuthButton = () => {
-//     const { login } = useOidc({ assert: 'user not logged in' });
-
-//     return (
-//         <Button color="primary" size="lg" onPress={() => login()}>
-//             Login
-//         </Button>
-//     );
-// };
