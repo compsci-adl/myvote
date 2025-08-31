@@ -18,6 +18,7 @@
     "@heroui/link": "^2.2.20",
     "@heroui/listbox": "^2.3.22",
     "@heroui/navbar": "^2.2.21",
+    "@heroui/react": "^2.8.1",
     "@heroui/snippet": "^2.2.24",
     "@heroui/switch": "^2.2.21",
     "@heroui/system": "^2.4.19",
@@ -31,7 +32,8 @@
     "next-auth": "5.0.0-beta.29",
     "next-themes": "^0.4.6",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "react-icons": "^5.5.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",

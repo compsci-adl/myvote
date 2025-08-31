@@ -9,10 +9,9 @@ const config = {
   ],
   theme: {
     extend: {
-      fontFamily: {
-        sans: ["var(--font-sans)"],
-        mono: ["var(--font-mono)"],
-      },
+        screens: {
+				mobile: { max: '767px' },
+			},
     },
   },
   darkMode: "class",
