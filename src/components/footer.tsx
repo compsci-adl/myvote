@@ -14,10 +14,22 @@ import {
 const LINKS = [
     { icon: FaEnvelope, link: 'mailto:dev@csclub.org.au', label: 'Email' },
     { icon: FaGithub, link: 'https://github.com/compsci-adl/', label: 'GitHub' },
-    { icon: FaInstagram, link: 'https://www.instagram.com/csclub.adl/', label: 'Instagram' },
-    { icon: FaFacebook, link: 'https://www.facebook.com/compsci.adl/', label: 'Facebook' },
+    {
+        icon: FaInstagram,
+        link: 'https://www.instagram.com/csclub.adl/',
+        label: 'Instagram',
+    },
+    {
+        icon: FaFacebook,
+        link: 'https://www.facebook.com/compsci.adl/',
+        label: 'Facebook',
+    },
     { icon: FaDiscord, link: 'https://discord.gg/UjvVxHA', label: 'Discord' },
-    { icon: FaLinkedin, link: 'https://www.linkedin.com/company/compsci-adl/', label: 'LinkedIn' },
+    {
+        icon: FaLinkedin,
+        link: 'https://www.linkedin.com/company/compsci-adl/',
+        label: 'LinkedIn',
+    },
 ];
 
 const FOOTER_SECTIONS = [
@@ -89,12 +101,7 @@ export const Footer = () => {
 
                 <div className="flex gap-5 justify-self-end text-2xl mobile:justify-self-auto">
                     {LINKS.map(({ icon: Icon, link }, i) => (
-                        <a
-                            href={link}
-                            key={i}
-                            className="text-default-500"
-                            target="_blank"
-                        >
+                        <a href={link} key={i} className="text-default-500" target="_blank">
                             <Icon />
                         </a>
                     ))}

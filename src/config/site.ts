@@ -2,57 +2,37 @@ export type SiteConfig = typeof siteConfig;
 
 export const siteConfig = {
     name: 'MyVote',
-    description: "The Computer Science Club's voting system.",
+    description: "The Computer Science Club's voting system for committee elections.",
     navItems: [
         {
             label: 'Home',
             href: '/',
         },
         {
-            label: 'Docs',
-            href: '/docs',
+            label: 'Voting',
+            href: '/voting',
         },
         {
-            label: 'Pricing',
-            href: '/pricing',
+            label: 'Candidates',
+            href: '/candidates',
         },
         {
-            label: 'Blog',
-            href: '/blog',
-        },
-        {
-            label: 'About',
-            href: '/about',
+            label: 'Admin',
+            href: '/admin',
         },
     ],
     navMenuItems: [
         {
-            label: 'Profile',
-            href: '/profile',
+            label: 'Voting',
+            href: '/voting',
         },
         {
-            label: 'Dashboard',
-            href: '/dashboard',
+            label: 'Candidates',
+            href: '/candidates',
         },
         {
-            label: 'Projects',
-            href: '/projects',
-        },
-        {
-            label: 'Team',
-            href: '/team',
-        },
-        {
-            label: 'Calendar',
-            href: '/calendar',
-        },
-        {
-            label: 'Settings',
-            href: '/settings',
-        },
-        {
-            label: 'Help & Feedback',
-            href: '/help-feedback',
+            label: 'Admin',
+            href: '/admin',
         },
         {
             label: 'Logout',
@@ -60,10 +40,9 @@ export const siteConfig = {
         },
     ],
     links: {
-        github: 'https://github.com/heroui-inc/heroui',
-        twitter: 'https://twitter.com/hero_ui',
-        docs: 'https://heroui.com',
-        discord: 'https://discord.gg/9b6yyZKmH4',
-        sponsor: 'https://patreon.com/jrgarciadev',
+        github: 'https://github.com/compsci-adl/myvote',
+        website: 'https://csclub.org.au',
+        discord: 'https://discord.gg/UjvVxHA',
+        email: 'mailto:dev@csclub.org.au',
     },
 };

@@ -4,7 +4,7 @@ import clsx from 'clsx';
 import { Metadata, Viewport } from 'next';
 
 import { Footer } from '@/components/footer';
-import { Navbar } from '@/components/navbar';
+import { Header } from '@/components/Header';
 import { fontSans } from '@/config/fonts';
 import { siteConfig } from '@/config/site';
 
@@ -39,7 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 )}
             >
                 <Providers themeProps={{ attribute: 'class', defaultTheme: 'dark' }}>
-                    <Navbar />
+                    <Header />
                     <main className="mx-auto max-w-screen-xl space-y-4 px-2 py-4">
                         {children}
                         <Footer />

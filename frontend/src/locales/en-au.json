@@ -1,0 +1,8 @@
+{
+	"header": {
+		"toggle-dark-mode": "Toggle Dark Mode",
+		"change-language": "Change Language"
+	},
+	"candidates-tab": "Candidates",
+	"voting-tab": "Voting"
+}
