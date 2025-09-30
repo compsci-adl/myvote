@@ -42,11 +42,14 @@ export async function POST(req: NextRequest) {
     // Expect /api/candidate-position-links
     const body = await req.json();
     // Insert candidate-position-link into sqlite db using drizzle
-    const [link] = await db
+    const insertResult = await db
         .insert(candidatePositionLinks)
         .values({
             ...body,
         })
         .returning();
+
+    const link = Array.isArray(insertResult) ? insertResult[0] : insertResult;
+
     return NextResponse.json(link, { status: 201 });
 }
