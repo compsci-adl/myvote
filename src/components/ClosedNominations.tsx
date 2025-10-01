@@ -31,16 +31,31 @@ export default function ClosedNominations({ electionId, setSliderValue }: Closed
 
         Papa.parse(file, {
             header: true,
-            complete: (results: { data: Nomination[] }) => {
-                const parsedNominations = results.data.map((row: any) => ({
-                    name: row.Name,
-                    statement: row.Statement,
-                    roles: row.Roles,
-                }));
+            complete: (results: { data: unknown[] }) => {
+                const parsedNominations = results.data.map((row) => {
+                    if (
+                        typeof row === 'object' &&
+                        row !== null &&
+                        'Name' in row &&
+                        'Statement' in row &&
+                        'Roles' in row
+                    ) {
+                        return {
+                            name: (row as { Name: string }).Name,
+                            statement: (row as { Statement: string }).Statement,
+                            roles: (row as { Roles: string }).Roles,
+                        };
+                    }
+                    return { name: '', statement: '', roles: '' };
+                });
                 setNominations(parsedNominations);
             },
-            error: (error: any) => {
-                console.error('Error parsing CSV:', error);
+            error: (error: unknown) => {
+                if (error instanceof Error) {
+                    console.error('Error parsing CSV:', error.message);
+                } else {
+                    console.error('Error parsing CSV:', error);
+                }
             },
         });
     }
@@ -85,9 +100,9 @@ export default function ClosedNominations({ electionId, setSliderValue }: Closed
             ...n,
             nominations: n.roles
                 ? n.roles
-                    .split(',')
-                    .map((role) => role.trim())
-                    .filter((role) => role)
+                      .split(',')
+                      .map((role) => role.trim())
+                      .filter((role) => role)
                 : [],
         }));
 
@@ -97,7 +112,7 @@ export default function ClosedNominations({ electionId, setSliderValue }: Closed
         await fetcher.post.mutate(`candidates/${electionId}`, { arg: candidatesWithNominations });
 
         // After candidates are created, Create candidate-position-links
-        // Loop for all candidates in csv file 
+        // Loop for all candidates in csv file
         for (const candidate of candidatesWithNominations) {
             // Loop for all positions the candidate is nominated for
             for (const roleName of candidate.nominations) {

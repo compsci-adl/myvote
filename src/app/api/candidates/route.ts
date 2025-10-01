@@ -40,9 +40,11 @@ export async function GET(req: NextRequest) {
     // Build nominations array for each candidate
     const candidateMap: Record<string, string[]> = {};
     links.forEach((link) => {
-        if (!candidateMap[link.candidate_id]) candidateMap[link.candidate_id] = [];
-        if (typeof link.position_id === 'string') {
-            candidateMap[link.candidate_id].push(link.position_id);
+        if (typeof link.candidate_id === 'string' && link.candidate_id) {
+            if (!candidateMap[link.candidate_id]) candidateMap[link.candidate_id] = [];
+            if (typeof link.position_id === 'string') {
+                candidateMap[link.candidate_id].push(link.position_id);
+            }
         }
     });
     console.log('[DEBUG] candidateMap:', candidateMap);

@@ -46,7 +46,7 @@ export default function WelcomePage() {
         <div className="flex min-h-screen flex-col items-center justify-center">
             <img src="/favicon.svg" alt="MyVote Logo" className="mb-4 h-24 w-24" />
             <h1 className="mb-4 text-4xl font-bold">Welcome to MyVote</h1>
-            <p className="mb-8 text-lg">The Computer Science Club's new voting system!</p>
+            <p className="mb-8 text-lg">The Computer Science Club&apos;s new voting system!</p>
             {status === 'loading' ? (
                 <p>Loading...</p>
             ) : session ? (

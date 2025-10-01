@@ -14,7 +14,7 @@ import type { Candidate } from '@/types/candidate';
 const useFocusedUsers = () => ({ focusedUsers: [] });
 
 export default function CandidatesPage() {
-    const { data: session } = useSession();
+    // const { data: session } = useSession();
     const { focusedUsers } = useFocusedUsers();
     const r = useRef(new Map());
     setRefs(r);

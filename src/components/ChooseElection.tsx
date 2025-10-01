@@ -3,9 +3,7 @@
 import { Button } from '@heroui/react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import useSWRMutation from 'swr/mutation';
 
-import { fetcher } from '../lib/fetcher';
 import { ElectionStatus } from '../types/election-status';
 
 interface Election {

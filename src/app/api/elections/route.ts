@@ -1,4 +1,8 @@
 import { eq } from 'drizzle-orm';
+import { NextRequest, NextResponse } from 'next/server';
+
+import { db } from '@/db/index';
+import { elections, electionStatusEnum } from '@/db/schema';
 export async function PATCH(req: NextRequest) {
     // PATCH /api/elections/[id] - update election by id
     const urlParts = req.url.split('/');
@@ -8,18 +12,10 @@ export async function PATCH(req: NextRequest) {
     }
     const body = await req.json();
     // Only allow updating name and status
-    const update: { name?: string; status?: (typeof elections._.status)['enum'][number] } = {};
+    const update: { name?: string; status?: (typeof electionStatusEnum)[number] } = {};
     if (body.name) update.name = body.name;
     if (body.status) {
-        const allowed = [
-            'PreRelease',
-            'Nominations',
-            'NominationsClosed',
-            'Voting',
-            'VotingClosed',
-            'ResultsReleased',
-        ];
-        if (allowed.includes(body.status)) {
+        if (electionStatusEnum.includes(body.status)) {
             update.status = body.status;
         } else {
             return NextResponse.json({ error: 'Invalid status value' }, { status: 400 });
@@ -38,11 +34,6 @@ export async function PATCH(req: NextRequest) {
     }
     return NextResponse.json(election, { status: 200 });
 }
-
-import { NextRequest, NextResponse } from 'next/server';
-
-import { db } from '@/db/index';
-import { elections } from '@/db/schema';
 
 export async function GET() {
     // Proxy GET /elections to backend

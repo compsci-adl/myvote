@@ -9,7 +9,7 @@ import {
     NavbarItem,
     Tooltip,
 } from '@heroui/react';
-import clsx from 'clsx';
+import { clsx } from 'clsx';
 import { usePathname, useRouter } from 'next/navigation';
 import { signIn, signOut, useSession } from 'next-auth/react';
 import { useTheme } from 'next-themes';
@@ -73,7 +73,7 @@ export const Header = () => {
                     // } else {
                     //   setIsPaidMember(false);
                     // }
-                } catch (error) {
+                } catch {
                     setIsPaidMember(false);
                 }
             }

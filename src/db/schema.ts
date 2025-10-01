@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { blob, integer, sqliteTable, text, primaryKey } from 'drizzle-orm/sqlite-core';
+import { blob, integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
 export const electionStatusEnum = [
     'PreRelease',
@@ -32,9 +32,7 @@ export const candidatePositionLinks = sqliteTable(
         candidate_id: column.text('candidate_id'),
         position_id: column.text('position_id'),
     }),
-    (table) => [
-        primaryKey({ columns: [table.candidate_id, table.position_id] }),
-    ]
+    (table) => [primaryKey({ columns: [table.candidate_id, table.position_id] })]
 );
 
 export const candidates = sqliteTable('candidate', {

@@ -1,6 +1,8 @@
+import { eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db/index';
+import { ballots, positions } from '@/db/schema';
 
 export async function GET(req: NextRequest) {
     // Expect /api/results?election_id=...
@@ -9,9 +11,14 @@ export async function GET(req: NextRequest) {
     if (!election_id) {
         return NextResponse.json({ error: 'Missing election_id' }, { status: 400 });
     }
-    // Query results from sqlite db using drizzle
-    const data = await db.query.results.findMany({
-        where: { election: election_id },
-    });
+    // Query ballots joined to positions, filter by election_id
+    const data = await db
+        .select({
+            ballot: ballots,
+            position: positions,
+        })
+        .from(ballots)
+        .innerJoin(positions, eq(ballots.position, positions.id))
+        .where(eq(positions.election_id, election_id));
     return NextResponse.json(data, { status: 200 });
 }

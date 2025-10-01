@@ -1,9 +1,10 @@
-import React from 'react';
 import { render } from '@testing-library/react';
+import React from 'react';
+
 import { useMount } from '../use-mount';
 
 function TestComponent({ fn }: { fn: () => void }) {
-    useMount(fn as any);
+    useMount(fn);
     return <div />;
 }
 

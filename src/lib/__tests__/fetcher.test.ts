@@ -4,7 +4,7 @@ import { fetcher } from '../fetcher';
 jest.mock('ky', () => {
     const json = jest.fn(() => Promise.resolve({ ok: true }));
     // Use a named instance to help TypeScript inference
-    const instance: Record<string, any> = {};
+    const instance: Record<string, unknown> = {};
     instance.get = jest.fn(() => ({ json }));
     instance.post = jest.fn(() => ({ json }));
     instance.put = jest.fn(() => ({ json }));

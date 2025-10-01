@@ -1,14 +1,11 @@
 'use client';
 
 import { Card, CardBody } from '@heroui/react';
-import clsx from 'clsx';
+import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
-import { memo, useEffect, useRef, useState } from 'react';
-import useSWRMutation from 'swr/mutation';
+import { memo, useRef, useState } from 'react';
 import { create } from 'zustand';
 
-import { useMount } from '../hooks/use-mount';
-import { fetcher } from '../lib/fetcher';
 import type { Candidate } from '../types/candidate';
 import type { Position } from '../types/position';
 import { useDND } from '../utils/dnd';

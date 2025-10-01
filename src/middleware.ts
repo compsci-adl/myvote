@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 
 const protectedRoutes = ['/voting', '/candidates', '/admin'];
-const publicRoutes = ['/', '/auth/signin', '/auth/error'];
+// const publicRoutes = ['/', '/auth/signin', '/auth/error'];
 
 export default async function middleware(request: NextRequest) {
     const session = await auth();
@@ -11,7 +11,7 @@ export default async function middleware(request: NextRequest) {
 
     // Check if the current route is protected
     const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route));
-    const isPublicRoute = publicRoutes.includes(pathname);
+    // const isPublicRoute = publicRoutes.includes(pathname);
 
     // If accessing a protected route without being authenticated
     if (isProtectedRoute && !session) {

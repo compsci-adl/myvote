@@ -82,14 +82,24 @@ export default function VotingPage() {
         firstElection && firstElection.id ? `/api/votes/${firstElection.id}` : null,
         fetcher.post.mutate,
         {
-            onSuccess: (data) => {
+            onSuccess: () => {
                 setStatusMessage('Vote submitted successfully!');
                 setTimeout(() => setStatusMessage(''), 5000);
                 localStorage.setItem('hasVoted', 'true');
             },
-            onError: (error: any) => {
-                if (error.response?.status === 409) {
-                    setStatusMessage('You have already voted.');
+            onError: (error: unknown) => {
+                if (
+                    typeof error === 'object' &&
+                    error !== null &&
+                    'response' in error &&
+                    typeof (error as { response?: { status?: number } }).response?.status ===
+                        'number'
+                ) {
+                    if ((error as { response: { status: number } }).response.status === 409) {
+                        setStatusMessage('You have already voted.');
+                    } else {
+                        setStatusMessage('Error submitting vote. Please try again.');
+                    }
                 } else {
                     setStatusMessage('Error submitting vote. Please try again.');
                 }
