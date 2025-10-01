@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db/index';
-import { ballots, positions } from '@/db/schema';
+import { ballots, positions, voters } from '@/db/schema';
 
 export async function GET(req: NextRequest) {
     // Expect /api/votes?election_id=123
@@ -43,11 +43,44 @@ export async function POST(req: NextRequest) {
             { status: 400 }
         );
     }
+
+    // Ensure voter exists or create
+    let voter = await db
+        .select()
+        .from(voters)
+        .where(eq(voters.student_id, body.student_id))
+        .then((rows) => rows.find((v) => v.election === election_id));
+    if (!voter) {
+        // Generate a UUID for voter id
+        const uuid = crypto.randomUUID();
+        const inserted = await db
+            .insert(voters)
+            .values({
+                id: uuid,
+                election: election_id,
+                student_id: body.student_id,
+                name: body.name,
+            })
+            .returning();
+        // Handle both array and ResultSet
+        voter = Array.isArray(inserted) ? inserted[0] : inserted;
+    }
+
+    // Generate a UUID for ballot id if not provided
+    const ballotId = body.id ?? crypto.randomUUID();
+
     // Insert ballot into sqlite db using drizzle
+    if (!voter) {
+        return NextResponse.json({ error: 'Failed to create or find voter' }, { status: 500 });
+    }
     const vote = await db
         .insert(ballots)
         .values({
-            ...body,
+            id: ballotId,
+            voter_id: voter.id,
+            position: body.position,
+            preferences: body.preferences,
+            // submitted will default
         })
         .returning();
     return NextResponse.json(vote, { status: 201 });

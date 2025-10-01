@@ -1,4 +1,10 @@
-'use client';
+interface Position {
+    id: string;
+    name: string;
+}
+
+type PositionsApiResponse = { positions: Position[] } | Position[];
+('use client');
 
 import { Button, Input } from '@heroui/react';
 import Papa from 'papaparse';
@@ -6,6 +12,8 @@ import { useState } from 'react';
 import useSWRMutation from 'swr/mutation';
 
 import { fetcher } from '../lib/fetcher';
+
+import { usePositions } from './usePositions';
 
 interface ClosedNominationsProps {
     electionId: number;
@@ -83,6 +91,7 @@ export default function ClosedNominations({ electionId, setSliderValue }: Closed
         }
     );
 
+    const { data: positionsData } = usePositions(electionId);
     const handleContinue = async () => {
         setStatus({ text: '', type: '' });
         // Client-side validation: ensure every candidate has at least one nomination
@@ -106,19 +115,85 @@ export default function ClosedNominations({ electionId, setSliderValue }: Closed
                 : [],
         }));
 
-        console.log('[DEBUG] candidatesWithNominations:', candidatesWithNominations);
-
         // Send all candidates to backend in a single array, as required by API
-        await fetcher.post.mutate(`candidates/${electionId}`, { arg: candidatesWithNominations });
+        let createdCandidates;
+        try {
+            createdCandidates = await fetcher.post.mutate(`candidates/${electionId}`, {
+                arg: candidatesWithNominations,
+            });
+        } catch {
+            setStatus({
+                text: 'Failed to create candidates. Please try again.',
+                type: 'error',
+            });
+            return;
+        }
 
-        // After candidates are created, Create candidate-position-links
-        // Loop for all candidates in csv file
-        for (const candidate of candidatesWithNominations) {
-            // Loop for all positions the candidate is nominated for
-            for (const roleName of candidate.nominations) {
-                await fetcher.post.mutate('candidate-position-links', {
-                    arg: { candidate_id: candidate.id, position_id: positions.id },
+        if (
+            !Array.isArray(createdCandidates) ||
+            createdCandidates.length !== candidatesWithNominations.length
+        ) {
+            setStatus({
+                text: 'Candidate creation failed or returned unexpected result.',
+                type: 'error',
+            });
+            return;
+        }
+
+        // Fetch positions for this election
+        // positionsData is expected to be { positions: Position[] } or just Position[]
+        let positions: Position[] = [];
+        if (Array.isArray(positionsData)) {
+            positions = positionsData as Position[];
+        } else if (
+            positionsData &&
+            typeof positionsData === 'object' &&
+            'positions' in positionsData &&
+            Array.isArray((positionsData as { positions: unknown }).positions)
+        ) {
+            positions = (positionsData as { positions: Position[] }).positions;
+        }
+        if (!positions.length) {
+            setStatus({
+                text: 'No positions found for this election.',
+                type: 'error',
+            });
+            return;
+        }
+
+        // For each candidate, create candidate-position-links for each nominated role
+        for (let i = 0; i < createdCandidates.length; i++) {
+            const candidate = createdCandidates[i];
+            const nomination = candidatesWithNominations[i];
+            if (!candidate || !candidate.id) {
+                setStatus({
+                    text: `Candidate ID missing for ${nomination.name}.`,
+                    type: 'error',
                 });
+                return;
+            }
+            for (const roleName of nomination.nominations) {
+                const position = positions.find(
+                    (p) => p.name.trim().toLowerCase() === roleName.trim().toLowerCase()
+                );
+                if (!position) {
+                    setStatus({
+                        text: `Position "${roleName}" not found for candidate ${nomination.name}.`,
+                        type: 'error',
+                    });
+                    return;
+                }
+                try {
+                    await fetcher.post.mutate('candidate-position-links', {
+                        arg: { candidate_id: candidate.id, position_id: position.id },
+                    });
+                } catch {
+                    setStatus({
+                        text: `Failed to link candidate ${nomination.name} to position ${roleName}.`,
+                        type: 'error',
+                    });
+                    return;
+                }
             }
         }
 

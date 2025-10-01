@@ -79,7 +79,7 @@ export default function VotingPage() {
 
     // Handle submit vote
     const submitVote = useSWRMutation(
-        firstElection && firstElection.id ? `/api/votes/${firstElection.id}` : null,
+        firstElection && firstElection.id ? `/votes?election_id=${firstElection.id}` : null,
         fetcher.post.mutate,
         {
             onSuccess: () => {
@@ -121,14 +121,18 @@ export default function VotingPage() {
                     grouped[position.id] = data.candidate_position_links.map(
                         (link: {
                             candidate_id: string;
-                            candidate_name: string;
                             position_id: number;
-                            position_name: string;
+                            candidate: {
+                                id: string;
+                                name: string;
+                                statement?: string;
+                                nominations?: string[];
+                            };
                         }) => ({
-                            id: link.candidate_id,
-                            name: link.candidate_name,
-                            statement: '', // Optionally fetch statement if needed
-                            nominations: [], // Not used anymore
+                            id: link.candidate?.id || link.candidate_id,
+                            name: link.candidate?.name || '',
+                            statement: link.candidate?.statement || '',
+                            nominations: link.candidate?.nominations || [],
                         })
                     );
                 }
@@ -148,26 +152,44 @@ export default function VotingPage() {
         // Prepare vote data using candidates data
         const voteData = Object.keys(candidates).map((positionId) => ({
             position: positionId,
-            preferences: candidates[parseInt(positionId)].map((candidate) => candidate.id),
+            preferences: (candidates[positionId] ?? []).map((candidate) => candidate.id),
         }));
 
-        const voteRequest = {
-            student_id: studentId,
-            election: firstElection ? firstElection.id : undefined,
-            name: studentName,
-            votes: voteData,
-        };
-
-        // Trigger the vote submission with the formatted request
-        submitVote.trigger(voteRequest);
+        // Submit each ballot individually as required by backend
+        for (const vote of voteData) {
+            const voteRequest = {
+                student_id: studentId,
+                election: firstElection ? firstElection.id : undefined,
+                name: studentName,
+                position: vote.position,
+                preferences: vote.preferences,
+            };
+            await submitVote.trigger(voteRequest);
+        }
         onClose();
     };
 
+    const statusMap: Record<string, number> = {
+        VotingClosed: 4,
+        ResultsReleased: 5,
+    };
+    const statusVal = firstElection?.status;
+    const statusNum =
+        typeof statusVal === 'number'
+            ? statusVal
+            : statusVal && statusVal in statusMap
+              ? statusMap[statusVal]
+              : Number(statusVal);
+    const isElectionClosed = statusNum === 4 || statusNum === 5;
     return (
         <div className="container mx-auto px-4 py-8">
             {message ? (
                 <div className="flex min-h-screen items-center justify-center">
                     <p className="text-center text-xl">{message}</p>
+                </div>
+            ) : isElectionClosed ? (
+                <div className="flex min-h-screen items-center justify-center">
+                    <p className="text-center text-xl">Election closed.</p>
                 </div>
             ) : hasVoted ? (
                 <div className="flex min-h-screen items-center justify-center">

@@ -42,14 +42,29 @@ export async function POST(req: NextRequest) {
     // Expect /api/candidate-position-links
     const body = await req.json();
     // Insert candidate-position-link into sqlite db using drizzle
-    const insertResult = await db
-        .insert(candidatePositionLinks)
-        .values({
-            ...body,
-        })
-        .returning();
+    try {
+        const insertResult = await db
+            .insert(candidatePositionLinks)
+            .values({
+                ...body,
+            })
+            .returning();
 
-    const link = Array.isArray(insertResult) ? insertResult[0] : insertResult;
-
-    return NextResponse.json(link, { status: 201 });
+        const link = Array.isArray(insertResult) ? insertResult[0] : insertResult;
+        if (!link) {
+            return NextResponse.json(
+                { error: 'Failed to create candidate-position-link' },
+                { status: 500 }
+            );
+        }
+        return NextResponse.json(link, { status: 201 });
+    } catch (error) {
+        return NextResponse.json(
+            {
+                error: 'Error creating candidate-position-link',
+                details: error instanceof Error ? error.message : error,
+            },
+            { status: 500 }
+        );
+    }
 }

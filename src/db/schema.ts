@@ -28,10 +28,14 @@ export const voters = sqliteTable('voter', {
 
 export const candidatePositionLinks = sqliteTable(
     'candidate_position_link',
-    (column) => ({
-        candidate_id: column.text('candidate_id'),
-        position_id: column.text('position_id'),
-    }),
+    {
+        candidate_id: text('candidate_id')
+            .notNull()
+            .references(() => candidates.id),
+        position_id: text('position_id')
+            .notNull()
+            .references(() => positions.id),
+    },
     (table) => [primaryKey({ columns: [table.candidate_id, table.position_id] })]
 );
 
