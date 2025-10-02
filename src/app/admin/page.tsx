@@ -121,7 +121,18 @@ export default function AdminPage() {
         onOpenChange();
     };
 
-    // Check if user has admin access
+    // Show loading spinner while session is loading
+    const { status } = useSession();
+    if (status === 'loading') {
+        return (
+            <div className="container mx-auto px-4 py-8">
+                <div className="flex min-h-screen items-center justify-center">
+                    <p className="text-center text-xl">Loading...</p>
+                </div>
+            </div>
+        );
+    }
+    // Check if user has admin access after session is loaded
     if (!isAdmin()) {
         return (
             <div className="container mx-auto px-4 py-8">
