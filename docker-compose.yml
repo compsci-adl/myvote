@@ -1,0 +1,18 @@
+services:
+  myvote:
+    image: myvote:latest
+    container_name: myvote
+    env_file:
+      - .env.local
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - PORT=3100
+    ports:
+      - 3100:3100
+    networks:
+      - csclub
+
+networks:
+  csclub:
+    external: true

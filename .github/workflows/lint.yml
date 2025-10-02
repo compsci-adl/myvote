@@ -1,0 +1,17 @@
+name: Linting Checks
+on:
+  workflow_call:
+
+jobs:
+  es-lint:
+    name: ESLint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - run: pnpm install
+      - run: pnpm run lint
+
