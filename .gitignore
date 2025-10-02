@@ -50,3 +50,4 @@ node_modules/
 /playwright/.auth/
 
 dev.sqlite
+dev_member.sqlite

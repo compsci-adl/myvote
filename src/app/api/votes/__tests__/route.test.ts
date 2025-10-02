@@ -45,11 +45,25 @@ valuesMock.mockReturnValue({
 });
 returningMock.mockResolvedValue([{ id: 'v2' }]);
 
+// Mock memberDb for membership check in POST
+const memberSelectMock = jest.fn();
+const memberFromMock = jest.fn();
+const memberWhereMock = jest.fn();
 jest.mock('@/db/index', () => ({
     db: {
         select: selectMockVotes,
         insert: insertMockVotes,
     },
+}));
+jest.mock('@/db/member', () => ({
+    memberDb: {
+        select: () => ({
+            from: () => ({
+                where: memberWhereMock,
+            }),
+        }),
+    },
+    memberTable: {},
 }));
 
 describe('votes route', () => {
@@ -86,12 +100,24 @@ describe('votes route', () => {
     test('POST inserts vote', async () => {
         // Setup select chain for position check: .where().then(...)
         whereMock.mockResolvedValueOnce([{ id: 'p1', election_id: 'e1' }]);
+        // Mock memberDb to return a valid member
+        memberWhereMock.mockResolvedValueOnce([
+            {
+                studentId: 'stu123',
+                membershipExpiresAt: Date.now() + 1000000,
+            },
+        ]);
         // Setup insert chain for ballot insert
         returningMock.mockResolvedValueOnce([{ id: 'v2' }]);
         const { POST } = await import('../route');
         const req = {
             url: 'http://localhost/api/votes?election_id=e1',
-            json: async () => ({ choice: 'x', position: 'p1' }),
+            json: async () => ({
+                choice: 'x',
+                position: 'p1',
+                keycloak_id: 'kc1',
+                name: 'Test User',
+            }),
         } as any;
         await POST(req);
         expect(insertMockVotes).toHaveBeenCalled();

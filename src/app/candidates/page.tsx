@@ -1,7 +1,7 @@
 'use client';
 
 import { Accordion, AccordionItem } from '@heroui/react';
-import { useSession } from 'next-auth/react';
+// import { useSession } from 'next-auth/react';
 import { useEffect, useRef, useState } from 'react';
 import useSWR from 'swr';
 import useSWRMutation from 'swr/mutation';
@@ -23,11 +23,6 @@ export default function CandidatesPage() {
     interface Position {
         id: string;
         name: string;
-    }
-
-    interface CandidateLink {
-        candidate_id: string;
-        position_id: string;
     }
 
     const [firstElection, setFirstElection] = useState<{
@@ -55,7 +50,7 @@ export default function CandidatesPage() {
     });
 
     // Cache for requests to avoid loops
-    const requestedKeys = useRef<{ positions?: string; candidates?: string; links?: string }>({});
+    // const requestedKeys = useRef<{ positions?: string; candidates?: string; links?: string }>({});
 
     // Fetch all positions for the election
     const { data: positionsData } = useSWR(

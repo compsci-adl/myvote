@@ -48,8 +48,15 @@ export default function VotingPage() {
         swrFetcher
     );
     useEffect(() => {
-        if (electionsData && electionsData && electionsData.length > 0) {
-            setFirstElection(electionsData[0]);
+        if (electionsData && electionsData.length > 0) {
+            const votingElection = electionsData.find(
+                (e: { status: string | number }) => e.status === 'Voting' || e.status === 3
+            );
+            if (votingElection) {
+                setFirstElection(votingElection);
+            } else {
+                setFirstElection(null);
+            }
         }
     }, [electionsData]);
 
@@ -159,6 +166,7 @@ export default function VotingPage() {
         for (const vote of voteData) {
             const voteRequest = {
                 student_id: studentId,
+                keycloak_id: studentId, // Ensure keycloak_id is sent for membership check
                 election: firstElection ? firstElection.id : undefined,
                 name: studentName,
                 position: vote.position,

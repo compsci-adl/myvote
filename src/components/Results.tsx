@@ -11,19 +11,20 @@ interface ResultsProps {
 }
 
 interface Candidate {
-    id: number;
+    id: string;
     name: string;
     ranking: number;
-    preferences_count: number;
+    total_points: number;
 }
 
 interface Winner {
-    id: number;
+    id: string;
     name: string;
+    ranking: number;
 }
 
 interface Position {
-    position_id: number;
+    position_id: string;
     position_name: string;
     winners: Winner[];
     candidates: Candidate[];
@@ -35,6 +36,7 @@ export default function Results({ electionId }: ResultsProps) {
     // Fetch election results
     const fetchResults = useSWRMutation(`results/${electionId}`, fetcher.get.mutate, {
         onSuccess: (data) => {
+            console.log('Fetched election results:', data);
             setResults(data.results);
         },
     });
@@ -68,17 +70,19 @@ export default function Results({ electionId }: ResultsProps) {
                             <tr className="bg-gray-200">
                                 <th className="border p-2">Ranking</th>
                                 <th className="border p-2">Candidate</th>
-                                <th className="border p-2">Preference Count</th>
+                                <th className="border p-2">Total Points</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {position.candidates.map((candidate) => (
-                                <tr key={candidate.id} className="text-center">
-                                    <td className="border p-2">{candidate.ranking}</td>
-                                    <td className="border p-2">{candidate.name}</td>
-                                    <td className="border p-2">{candidate.preferences_count}</td>
-                                </tr>
-                            ))}
+                            {position.candidates
+                                .sort((a, b) => a.ranking - b.ranking)
+                                .map((candidate) => (
+                                    <tr key={candidate.id} className="text-center">
+                                        <td className="border p-2">{candidate.ranking}</td>
+                                        <td className="border p-2">{candidate.name}</td>
+                                        <td className="border p-2">{candidate.total_points}</td>
+                                    </tr>
+                                ))}
                         </tbody>
                     </table>
                 </div>

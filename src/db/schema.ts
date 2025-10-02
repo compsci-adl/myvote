@@ -22,7 +22,7 @@ export const voters = sqliteTable('voter', {
     election: text('election')
         .notNull()
         .references(() => elections.id),
-    student_id: integer('student_id').notNull(),
+    student_id: text('student_id').notNull(),
     name: text('name').notNull(),
 });
 

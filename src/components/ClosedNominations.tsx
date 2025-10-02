@@ -1,10 +1,4 @@
-interface Position {
-    id: string;
-    name: string;
-}
-
-type PositionsApiResponse = { positions: Position[] } | Position[];
-('use client');
+'use client';
 
 import { Button, Input } from '@heroui/react';
 import Papa from 'papaparse';
@@ -12,8 +6,12 @@ import { useState } from 'react';
 import useSWRMutation from 'swr/mutation';
 
 import { fetcher } from '../lib/fetcher';
-
 import { usePositions } from './usePositions';
+
+interface Position {
+    id: string;
+    name: string;
+}
 
 interface ClosedNominationsProps {
     electionId: number;

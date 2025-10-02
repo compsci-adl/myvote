@@ -1,7 +1,8 @@
-import { eq } from 'drizzle-orm';
+import { and, eq, gt } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db/index';
+import { memberDb, memberTable } from '@/db/member';
 import { ballots, positions, voters } from '@/db/schema';
 
 export async function GET(req: NextRequest) {
@@ -31,6 +32,36 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Missing election_id' }, { status: 400 });
     }
     const body = await req.json();
+
+    // Membership check: require valid keycloak_id and active membership (from memberDb)
+    if (!body.keycloak_id) {
+        return NextResponse.json({ error: 'Missing keycloak_id in request.' }, { status: 400 });
+    }
+    const member = await memberDb
+        .select()
+        .from(memberTable)
+        .where(
+            and(
+                eq(memberTable.keycloakId, body.keycloak_id),
+                gt(memberTable.membershipExpiresAt, new Date())
+            )
+        )
+        .then((rows) => rows[0]);
+    if (!member) {
+        return NextResponse.json(
+            { error: 'You must be a paid CS club member to vote.' },
+            { status: 403 }
+        );
+    }
+    // Use the studentId from the member record for the voter table
+    const realStudentId = member.studentId;
+    if (!realStudentId) {
+        return NextResponse.json(
+            { error: 'No student ID found for this member.' },
+            { status: 400 }
+        );
+    }
+
     // Validate that the position belongs to the election
     const pos = await db
         .select()
@@ -48,7 +79,7 @@ export async function POST(req: NextRequest) {
     let voter = await db
         .select()
         .from(voters)
-        .where(eq(voters.student_id, body.student_id))
+        .where(eq(voters.student_id, realStudentId))
         .then((rows) => rows.find((v) => v.election === election_id));
     if (!voter) {
         // Generate a UUID for voter id
@@ -58,7 +89,7 @@ export async function POST(req: NextRequest) {
             .values({
                 id: uuid,
                 election: election_id,
-                student_id: body.student_id,
+                student_id: realStudentId,
                 name: body.name,
             })
             .returning();
