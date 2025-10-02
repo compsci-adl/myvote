@@ -77,7 +77,7 @@ jobs:
         run: |
           echo "$KEY" > private_key && chmod 600 private_key
           ssh -v -o StrictHostKeyChecking=no -i private_key ${USER}@${HOSTNAME} '
-              cd ~/website
+              cd ~/myvote
               aws s3 cp s3://${{ secrets.AWS_S3_BUCKET }}/myvote/myvote.tar.gz .
               aws s3 cp s3://${{ secrets.AWS_S3_BUCKET }}/myvote/docker-compose.yml .
               docker load -i myvote.tar.gz
