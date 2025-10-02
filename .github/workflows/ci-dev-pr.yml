@@ -1,0 +1,32 @@
+name: Development - Pull Request
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint:
+    name: Linting Checks
+    uses: ./.github/workflows/lint.yml
+  jest:
+    name: Jest Tests
+    uses: ./.github/workflows/jest.yml
+  playwright:
+    name: Playwright Tests
+    uses: ./.github/workflows/playwright.yml
+
+  build:
+    needs: [lint, jest, playwright]
+    name: Build
+    runs-on: ubuntu-latest
+    environment: Development
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Build Docker container
+        run: |
+          docker buildx build \
+            --file=Dockerfile -t myvote .

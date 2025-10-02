@@ -1,0 +1,16 @@
+name: Jests Tests
+on:
+  workflow_call:
+jobs:
+  test:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: lts/*
+      - name: Install dependencies
+        run: npm install -g pnpm && pnpm install
+      - name: Run Jest tests
+        run: pnpm test:jest

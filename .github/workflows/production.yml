@@ -8,12 +8,12 @@ env:
   AWS_REGION: ap-southeast-2
 
 jobs:
-  lint-format:
-    name: Linting and Formatting Checks
-    uses: ./.github/workflows/lint-and-format.yml
+  lint:
+    name: Linting Checks
+    uses: ./.github/workflows/lint.yml
 
   build:
-    needs: lint-format
+    needs: lint
     name: Build
     runs-on: ubuntu-24.04-arm
     environment: Production
@@ -22,10 +22,10 @@ jobs:
       contents: read
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           role-session-name: ${{ secrets.AWS_ROLE_SESSION_NAME }}
@@ -42,30 +42,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-buildx-
 
-      - name: Set environment variables for MyVote (frontend)
-        run: |
-          echo "VITE_OIDC_ISSUER_URI=${{ secrets.VITE_OIDC_ISSUER_URI }}" >> frontend/.env
-          echo "VITE_OIDC_CLIENT_ID=${{ secrets.VITE_OIDC_CLIENT_ID }}" >> frontend/.env
-          echo "VITE_OIDC_CLIENT_SECRET=${{ secrets.VITE_OIDC_CLIENT_SECRET }}" >> frontend/.env
-          echo "BASE_URL=${{ secrets.BASE_URL }}" >> frontend/.env
-
-      - name: Set environment variables for MyVote-API (backend)
-        run: |
-          echo "TURSO_DATABASE_URL=${{ secrets.TURSO_DATABASE_URL }}" >> backend/src/.env
-          echo "TURSO_AUTH_TOKEN=${{ secrets.TURSO_AUTH_TOKEN }}" >> backend/src/.env
-
-      - name: Build MyVote-API (backend) Docker image
-        env:
-          PRODUCTION_BUILD: 'true'
-        run: |
-          docker buildx build \
-          --cache-from=type=local,src=/tmp/.buildx-cache \
-          --cache-to=type=local,dest=/tmp/.buildx-cache-new,mode=max \
-          --output type=docker,dest=myvote-api.tar \
-          --platform=linux/arm64 --file=backend/Dockerfile -t myvote-api .
-          gzip myvote-api.tar
-
-      - name: Build MyVote (frontend) Docker image
+      - name: Build Docker container
         env:
           PRODUCTION_BUILD: 'true'
         run: |
@@ -73,7 +50,7 @@ jobs:
           --cache-from=type=local,src=/tmp/.buildx-cache \
           --cache-to=type=local,dest=/tmp/.buildx-cache-new,mode=max \
           --output type=docker,dest=myvote.tar \
-          --platform=linux/arm64 --file=frontend/Dockerfile -t myvote .
+          --platform=linux/arm64 --file=Dockerfile -t myvote .
           gzip myvote.tar
 
       - name: Save Docker cache
@@ -81,10 +58,9 @@ jobs:
         run: |
           rsync -a --delete /tmp/.buildx-cache-new/ /tmp/.buildx-cache/
 
-      - name: Upload images and compose file to S3
+      - name: Copy image and compose file to S3
         run: |
           aws s3 cp ./myvote.tar.gz s3://${{ secrets.AWS_S3_BUCKET }}/myvote/
-          aws s3 cp ./myvote-api.tar.gz s3://${{ secrets.AWS_S3_BUCKET }}/myvote/
           aws s3 cp ./docker-compose.yml s3://${{ secrets.AWS_S3_BUCKET }}/myvote/
 
   deploy:
@@ -101,11 +77,9 @@ jobs:
         run: |
           echo "$KEY" > private_key && chmod 600 private_key
           ssh -v -o StrictHostKeyChecking=no -i private_key ${USER}@${HOSTNAME} '
-              cd ~/myvote
+              cd ~/website
               aws s3 cp s3://${{ secrets.AWS_S3_BUCKET }}/myvote/myvote.tar.gz .
-              aws s3 cp s3://${{ secrets.AWS_S3_BUCKET }}/myvote/myvote-api.tar.gz .
               aws s3 cp s3://${{ secrets.AWS_S3_BUCKET }}/myvote/docker-compose.yml .
               docker load -i myvote.tar.gz
-              docker load -i myvote-api.tar.gz
               docker compose up -d
           '

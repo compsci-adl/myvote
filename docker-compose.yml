@@ -1,22 +1,18 @@
 services:
-  backend:
-    build: 
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "4040:4040"
-    volumes:
-      -  ~/myvote/db:/app
+  myvote:
+    image: myvote:latest
+    container_name: myvote
+    env_file:
+      - .env.local
     environment:
-      - UV_COMPILE_BYTECODE=1
-
-  frontend:
-    build:
-      context: ./frontend 
-      dockerfile: Dockerfile
+      - PUID=1000
+      - PGID=1000
+      - PORT=3100
     ports:
-      - "4000:4000"
-    volumes:
-      - ./frontend:/app
-    depends_on:
-      - backend
+      - 3100:3100
+    networks:
+      - csclub
+
+networks:
+  csclub:
+    external: true
