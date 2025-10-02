@@ -37,6 +37,13 @@ export function hareclark(
     ballots: string[][],
     number_of_vacancies: number = 1
 ): string[] {
+    return hareclarkWithTallies(candidates, ballots, number_of_vacancies).elected;
+}
+export function hareclarkWithTallies(
+    candidates: string[],
+    ballots: string[][],
+    number_of_vacancies: number = 1
+): { elected: string[]; tallies: Record<string, number> } {
     // Reverse ballots in-place
     for (const ballot of ballots) {
         ballot.reverse();
@@ -50,11 +57,17 @@ export function hareclark(
         weight: 1,
     }));
     const votes = new Map<string, number>();
+    // Track last non-negative vote value for each candidate
+    const lastPositiveVotes: Record<string, number> = {};
     for (const wballot of ballots_with_weights) {
         if (wballot.ballot.length) {
             const last = wballot.ballot[wballot.ballot.length - 1];
             votes.set(last, (votes.get(last) || 0) + wballot.weight);
         }
+    }
+    // Initialise lastPositiveVotes
+    for (const cand of candidates) {
+        lastPositiveVotes[cand] = votes.get(cand) ?? 0;
     }
 
     while (number_of_vacancies > 0 && candidates.length - unavailable_candidates.size > 0) {
@@ -75,6 +88,8 @@ export function hareclark(
             break;
         }
         if ((votes.get(winner) || 0) > quota) {
+            // Record last positive value before setting to -2
+            lastPositiveVotes[winner] = votes.get(winner) ?? 0;
             const surplus = (votes.get(winner) || 0) - quota;
             const transfer_value = surplus / (votes.get(winner) || 1);
             _process_candidate(
@@ -88,8 +103,16 @@ export function hareclark(
             votes.set(winner, -2);
             number_of_vacancies -= 1;
         } else {
+            // Record last positive value before setting to -1
+            lastPositiveVotes[loser] = votes.get(loser) ?? 0;
             _process_candidate(loser, unavailable_candidates, ballots_with_weights, votes);
             votes.set(loser, -1);
+        }
+        // Update lastPositiveVotes for all candidates still in
+        for (const cand of candidates) {
+            if (!unavailable_candidates.has(cand) && (votes.get(cand) ?? 0) >= 0) {
+                lastPositiveVotes[cand] = votes.get(cand) ?? 0;
+            }
         }
     }
     if (number_of_vacancies) {
@@ -99,5 +122,10 @@ export function hareclark(
             }
         }
     }
-    return elected_candidates;
+    // Prepare tallies for all candidates (last non-negative vote value)
+    const tallies: Record<string, number> = {};
+    for (const cand of candidates) {
+        tallies[cand] = lastPositiveVotes[cand] ?? 0;
+    }
+    return { elected: elected_candidates, tallies };
 }
