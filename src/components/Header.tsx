@@ -60,19 +60,22 @@ export const Header = () => {
         const fetchMembershipStatus = async () => {
             if (session?.user?.id) {
                 try {
-                    // TODO: Implement fetcher call
-                    // const response = await fetcher.get.query([
-                    //   `membership/${session.user.id}`,
-                    // ]);
-
-                    // For now, assume paid member for testing
-                    setIsPaidMember(true);
-
-                    // if (response.status === 'Paid member') {
-                    //   setIsPaidMember(true);
-                    // } else {
-                    //   setIsPaidMember(false);
-                    // }
+                    const { fetcher } = await import('../lib/fetcher');
+                    const response = await fetcher.post.query([
+                        'validate-member',
+                        {
+                            json: { keycloak_id: session.user.id },
+                        },
+                    ]);
+                    // If response has ok: true, user is a paid member
+                    setIsPaidMember(
+                        Boolean(
+                            response &&
+                                typeof response === 'object' &&
+                                'ok' in response &&
+                                response.ok === true
+                        )
+                    );
                 } catch {
                     setIsPaidMember(false);
                 }
@@ -96,10 +99,6 @@ export const Header = () => {
                 </NavbarBrand>
 
                 <NavbarContent justify="end" className="flex items-center gap-4">
-                    {status === 'loading' && (
-                        <span className="text-foreground-500">Loading...</span>
-                    )}
-
                     {status === 'authenticated' ? (
                         <LoggedInAuthButton />
                     ) : (
