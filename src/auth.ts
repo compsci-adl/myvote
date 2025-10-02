@@ -20,6 +20,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             },
         }),
     ],
+    trustHost: true,
     callbacks: {
         async jwt({ token, account, profile }) {
             // Persist the OAuth access_token and or the user id to the token right after signin
