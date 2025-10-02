@@ -35,11 +35,13 @@ export default function VotingPage() {
     const [statusMessage, setStatusMessage] = useState<string>('');
     const [candidates, setCandidates] = useState<Record<string, Candidate[]>>({});
 
-    // Get student info from session instead of localStorage
+    // Get student info from session
     const studentId = session?.user?.id; // This will be the Keycloak ID
     const studentName = session?.user?.name;
-    const hasVoted =
-        typeof window !== 'undefined' ? localStorage.getItem('hasVoted') === 'true' : false;
+
+    // Membership and vote status state
+    const [isMember, setIsMember] = useState<boolean | null>(null);
+    const [hasVoted, setHasVoted] = useState<boolean | null>(null);
 
     // Fetch election data
     const swrFetcher = async (url: string) => fetch(url).then((res) => res.json());
@@ -47,6 +49,42 @@ export default function VotingPage() {
         '/api/elections',
         swrFetcher
     );
+
+    // Membership check
+    useEffect(() => {
+        if (!studentId) return;
+        const checkMembership = async () => {
+            try {
+                const res = await fetch(`/api/membership?keycloak_id=${studentId}`);
+                const data = await res.json();
+                // If membership found and not expired, allow voting
+                setIsMember(Array.isArray(data) && data.length > 0);
+            } catch (e) {
+                setIsMember(false);
+            }
+        };
+        checkMembership();
+    }, [studentId]);
+
+    // Check if user has already voted for this election
+    useEffect(() => {
+        if (!studentId || !firstElection?.id) return;
+        const checkVoted = async () => {
+            try {
+                // Query API for ballots for this user and election only
+                const res = await fetch(
+                    `/api/votes?election_id=${firstElection.id}&student_id=${studentId}`
+                );
+                const data = await res.json();
+                // If any ballot for this student, mark as voted
+                const voted = Array.isArray(data) && data.length > 0;
+                setHasVoted(voted);
+            } catch (e) {
+                setHasVoted(false);
+            }
+        };
+        checkVoted();
+    }, [studentId, firstElection]);
     useEffect(() => {
         if (electionsData && electionsData.length > 0) {
             const votingElection = electionsData.find(
@@ -74,15 +112,19 @@ export default function VotingPage() {
     useEffect(() => {
         if (electionsLoading) return;
         if (!firstElection) {
-            setMessage('No elections available.');
+            setMessage('No open elections available.');
         } else if (firstElection.status < 3) {
             setMessage("Voting hasn't opened yet.");
         } else if (firstElection.status > 3) {
             setMessage('Voting has closed.');
+        } else if (isMember === false) {
+            setMessage('You must be a paid CS club member to vote.');
+        } else if (hasVoted) {
+            setMessage('You have already voted.');
         } else {
             setMessage('');
         }
-    }, [firstElection, electionsLoading]);
+    }, [firstElection, electionsLoading, isMember, hasVoted]);
 
     // Handle submit vote
     const submitVote = useSWRMutation(
@@ -92,7 +134,7 @@ export default function VotingPage() {
             onSuccess: () => {
                 setStatusMessage('Vote submitted successfully!');
                 setTimeout(() => setStatusMessage(''), 5000);
-                localStorage.setItem('hasVoted', 'true');
+                setHasVoted(true);
             },
             onError: (error: unknown) => {
                 if (
@@ -104,6 +146,13 @@ export default function VotingPage() {
                 ) {
                     if ((error as { response: { status: number } }).response.status === 409) {
                         setStatusMessage('You have already voted.');
+                        setHasVoted(true);
+                        setMessage('You have already voted.');
+                    } else if (
+                        (error as { response: { status: number } }).response.status === 403
+                    ) {
+                        setStatusMessage('You must be a paid CS club member to vote.');
+                        setIsMember(false);
                     } else {
                         setStatusMessage('Error submitting vote. Please try again.');
                     }
@@ -117,7 +166,7 @@ export default function VotingPage() {
 
     // Fetch candidates for each position using candidate-position-links
     useEffect(() => {
-        if (!firstElection?.id || positions.length === 0) return;
+        if (!firstElection?.id || positions.length === 0 || hasVoted) return;
         const fetchCandidatesForPositions = async () => {
             const grouped: Record<string, Candidate[]> = {};
             for (const position of positions) {
@@ -146,12 +195,20 @@ export default function VotingPage() {
             setCandidates(grouped);
         };
         fetchCandidatesForPositions();
-    }, [firstElection, positions]);
+    }, [firstElection, positions, hasVoted]);
 
     // Handle form submit
     const handleSubmit = async () => {
         if (!studentId || !studentName) {
             alert('Error: No student ID or name found. Please log in again.');
+            return;
+        }
+        if (hasVoted) {
+            setStatusMessage('You have already voted.');
+            return;
+        }
+        if (isMember === false) {
+            setStatusMessage('You must be a paid CS club member to vote.');
             return;
         }
 

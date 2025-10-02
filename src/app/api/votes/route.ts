@@ -62,6 +62,26 @@ export async function POST(req: NextRequest) {
         );
     }
 
+    // Check if a ballot already exists for this voter, election, and position
+    const existingVoterRecord = await db
+        .select()
+        .from(voters)
+        .where(eq(voters.student_id, realStudentId))
+        .then((rows) => rows.find((v) => v.election === election_id));
+    if (existingVoterRecord) {
+        const existingBallot = await db
+            .select()
+            .from(ballots)
+            .where(eq(ballots.voter_id, existingVoterRecord.id))
+            .then((rows) => rows.find((b) => b.position === body.position));
+        if (existingBallot) {
+            return NextResponse.json(
+                { error: 'You have already voted for this position.' },
+                { status: 409 }
+            );
+        }
+    }
+
     // Validate that the position belongs to the election
     const pos = await db
         .select()

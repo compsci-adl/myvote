@@ -14,21 +14,16 @@ export default function WelcomePage() {
         const checkMembershipAndRedirect = async () => {
             if (session?.user?.id) {
                 try {
-                    // TODO: Implement fetcher call to check membership
-                    // const response = await fetcher.get.query([`membership/${session.user.id}`]);
-
-                    // For now, assume paid member and redirect to voting
-                    router.push('/voting');
-
-                    // if (response.status === 'Paid member') {
-                    //   localStorage.setItem('student_id', response.student_id);
-                    //   localStorage.setItem('full_name', response.full_name);
-                    //   router.push('/voting');
-                    // } else if (response.status === 'Unpaid member') {
-                    //   alert('Please pay for your membership on the CS Club Website first. Then logout and login again.');
-                    // } else {
-                    //   alert('Please create an account on the CS Club Website first and pay for your membership. Then logout and login again.');
-                    // }
+                    const res = await fetch(`/api/membership?keycloak_id=${session.user.id}`);
+                    const data = await res.json();
+                    if (Array.isArray(data) && data.length > 0) {
+                        // Membership found, redirect to voting
+                        router.push('/voting');
+                    } else {
+                        alert(
+                            'Please pay for your membership on the CS Club Website first. Then logout and login again.'
+                        );
+                    }
                 } catch (error) {
                     alert(
                         'Please create an account on the CS Club Website first and pay for your membership. Then logout and login again.'
