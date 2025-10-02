@@ -37,10 +37,6 @@ export default function AdminPage() {
     const [selectedElection, setSelectedElection] = useState<{
         id: number;
         name: string;
-        nomination_start: Date;
-        nomination_end: Date;
-        voting_start: Date;
-        voting_end: Date;
         status: ElectionStatus;
     } | null>(null);
 

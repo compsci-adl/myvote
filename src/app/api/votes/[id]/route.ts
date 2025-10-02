@@ -4,9 +4,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/index';
 import { ballots, positions } from '@/db/schema';
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+type RouteContext = { params: Promise<{ id: string }> };
+
+export async function POST(req: NextRequest, context: RouteContext) {
     // Expect /api/votes/[id] where id is the election_id
-    const election_id = params.id;
+    const { id: election_id } = await context.params;
     if (!election_id) {
         return NextResponse.json({ error: 'Missing election_id' }, { status: 400 });
     }

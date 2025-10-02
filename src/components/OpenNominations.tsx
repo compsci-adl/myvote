@@ -24,7 +24,12 @@ export default function OpenNominations({ electionId, setSliderValue }: OpenNomi
 
     const fetchedPositions = useSWRMutation(`positions/${electionId}`, fetcher.get.mutate, {
         onSuccess: async (data) => {
-            setPositions(data);
+            setPositions(
+                data as Record<
+                    number,
+                    { name?: string; description?: string; vacancies?: string; executive?: string }
+                >
+            );
         },
     });
 

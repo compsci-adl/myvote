@@ -7,10 +7,10 @@ export async function PATCH(req: NextRequest) {
     }
     const body = await req.json();
     // Only allow updating name and status
-    const update: { name?: string; status?: string } = {};
+    const update: { name?: string; status?: ElectionStatus } = {};
     if (body.name) update.name = body.name;
     if (body.status !== undefined) {
-        const allowed = [
+        const allowed: ElectionStatus[] = [
             'PreRelease',
             'Nominations',
             'NominationsClosed',
@@ -33,7 +33,7 @@ export async function PATCH(req: NextRequest) {
             statusValue = statusValue.trim();
         }
         if (allowed.includes(statusValue)) {
-            update.status = statusValue;
+            update.status = statusValue as ElectionStatus;
         } else {
             return NextResponse.json(
                 { error: `Invalid status value: ${body.status}` },
@@ -58,7 +58,7 @@ import { eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db/index';
-import { elections } from '@/db/schema';
+import { elections, ElectionStatus } from '@/db/schema';
 
 export async function GET(req: NextRequest) {
     // GET /api/elections/[id] - fetch election by id

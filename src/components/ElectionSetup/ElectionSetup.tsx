@@ -6,7 +6,6 @@ import useSWRMutation from 'swr/mutation';
 
 import { fetcher } from '../../lib/fetcher';
 import type { ElectionStatus } from '../../types/election-status';
-
 import ElectionInfo from './ElectionInfo';
 import Positions from './Positions';
 import { electionSchema } from './schemas';
@@ -61,13 +60,11 @@ const ElectionSetup = ({ setSliderValue, setSelectedElection }: ElectionSetupPro
         },
         onSuccess: async (resp) => {
             setStatus({ text: 'Election created successfully!', type: 'success' });
-            setSelectedElection(resp);
+            setSelectedElection(resp as { id: number; name: string; status: ElectionStatus });
             // POST each position to /api/positions
             for (const pos of positions) {
-                await fetch(`/api/positions?election_id=${resp.id}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(pos),
+                await fetcher.post.mutate(`/positions?election_id=${(resp as { id: number }).id}`, {
+                    arg: pos,
                 });
             }
             setTimeout(() => {

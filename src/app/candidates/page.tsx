@@ -38,9 +38,9 @@ export default function CandidatesPage() {
     // Elections API returns array of elections
     const fetchElections = useSWRMutation('/elections', fetcher.get.mutate, {
         onSuccess: (data) => {
-            const votingElection = (data || []).find(
-                (e: { id: string; status: string }) => e.status === 'Voting'
-            );
+            const votingElection = Array.isArray(data)
+                ? data.find((e: { id: string; status: string }) => e.status === 'Voting')
+                : undefined;
             if (votingElection) {
                 setFirstElection(votingElection);
             } else {

@@ -5,22 +5,26 @@ const isDev = process.env.NODE_ENV === 'development';
 
 export const env = createEnv({
     server: {
-        AUTH_KEYCLOAK_ID: z.string().min(1).optional(),
-        AUTH_KEYCLOAK_SECRET: z.string().min(1).optional(),
-        AUTH_REALM: z.string().min(1).optional(),
+        NEXTAUTH_URL: z.string().url().min(1).optional(),
+        AUTH_SECRET: z.string().min(1).optional(),
+        KEYCLOAK_CLIENT_ID: z.string().min(1).optional(),
+        KEYCLOAK_CLIENT_SECRET: z.string().min(1).optional(),
+        KEYCLOAK_ISSUER: z.string().url().min(1).optional(),
         DATABASE_URL: z.string().min(1),
         DATABASE_AUTH_TOKEN: isDev ? z.string().optional() : z.string().min(1),
-    },
-    client: {
-        NEXT_PUBLIC_KEYCLOAK_REDIRECT_URI: z.string().url().min(1).optional(),
-        NEXT_PUBLIC_CONTAINER_KEYCLOAK_ENDPOINT: z.string().url().min(1).optional(),
-        NEXT_PUBLIC_LOCAL_KEYCLOAK_URL: z.string().url().min(1).optional(),
+        MEMBER_DATABASE_URL: z.string().min(1).optional(),
+        MEMBER_DATABASE_AUTH_TOKEN: z.string().optional(),
     },
     experimental__runtimeEnv: {
-        NEXT_PUBLIC_KEYCLOAK_REDIRECT_URI: process.env.NEXT_PUBLIC_KEYCLOAK_REDIRECT_URI,
-        NEXT_PUBLIC_CONTAINER_KEYCLOAK_ENDPOINT:
-            process.env.NEXT_PUBLIC_CONTAINER_KEYCLOAK_ENDPOINT,
-        NEXT_PUBLIC_LOCAL_KEYCLOAK_URL: process.env.NEXT_PUBLIC_LOCAL_KEYCLOAK_URL,
+        NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+        AUTH_SECRET: process.env.AUTH_SECRET,
+        KEYCLOAK_CLIENT_ID: process.env.KEYCLOAK_CLIENT_ID,
+        KEYCLOAK_CLIENT_SECRET: process.env.KEYCLOAK_CLIENT_SECRET,
+        KEYCLOAK_ISSUER: process.env.KEYCLOAK_ISSUER,
+        DATABASE_URL: process.env.DATABASE_URL,
+        DATABASE_AUTH_TOKEN: process.env.DATABASE_AUTH_TOKEN,
+        MEMBER_DATABASE_URL: process.env.MEMBER_DATABASE_URL,
+        MEMBER_DATABASE_AUTH_TOKEN: process.env.MEMBER_DATABASE_AUTH_TOKEN,
     },
     skipValidation: process.env.SKIP_ENV_VALIDATION,
 });
