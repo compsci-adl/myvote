@@ -8,15 +8,16 @@ jest.mock('next/server', () => ({
 }));
 
 const selectMock_membership = jest.fn();
-
-jest.mock('@/db/index', () => ({
-    db: {
+const memberTable = { keycloakId: 'keycloakId' };
+jest.mock('@/db/member', () => ({
+    memberDb: {
         select: () => ({
             from: () => ({
                 where: async (...args: any[]) => selectMock_membership(...args),
             }),
         }),
     },
+    memberTable,
 }));
 
 describe('membership route', () => {
