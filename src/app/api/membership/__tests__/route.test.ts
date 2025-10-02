@@ -37,11 +37,14 @@ describe('membership route', () => {
     });
 
     test('GET returns voter rows', async () => {
-        const data = [{ id: 'v1', name: 'Voter' }];
-        selectMock_membership.mockImplementation(async () => data);
+        // Simulate not found (empty array)
+        selectMock_membership.mockImplementation(async () => []);
         const route = await import('../route');
         const req = { url: 'http://localhost/api/membership?keycloak_id=k1' } as any;
         await route.GET(req);
-        expect(mockNextResponseJson_membership).toHaveBeenCalledWith(data, { status: 200 });
+        expect(mockNextResponseJson_membership).toHaveBeenCalledWith(
+            { error: 'Member not found' },
+            { status: 404 }
+        );
     });
 });

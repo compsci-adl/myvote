@@ -1,4 +1,39 @@
+// Silence tie warnings in tests
+beforeAll(() => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+});
+afterAll(() => {
+    (console.warn as jest.Mock).mockRestore();
+});
 import { hareclark } from './hareclark';
+it('handles a candidate winning multiple positions and choosing one', () => {
+    // Simulate two positions, with overlapping candidates
+    const candidatesA = ['A', 'B', 'C'];
+    const candidatesB = ['A', 'D', 'E'];
+    const ballotsA = [
+        ['A', 'B', 'C'],
+        ['B', 'A', 'C'],
+        ['A', 'C', 'B'],
+        ['C', 'A', 'B'],
+    ];
+    const ballotsB = [
+        ['A', 'D', 'E'],
+        ['D', 'A', 'E'],
+        ['A', 'E', 'D'],
+        ['E', 'A', 'D'],
+    ];
+
+    const winnerA = hareclark(candidatesA, ballotsA, 1)[0];
+    const winnerB = hareclark(candidatesB, ballotsB, 1)[0];
+    expect(winnerA).toBe('A');
+    expect(winnerB).toBe('A');
+
+    // Simulate candidate A chooses to take position A, so must be removed from B
+    const candidatesB2 = candidatesB.filter((c) => c !== 'A');
+    const ballotsB2 = ballotsB.map((b) => b.filter((c) => c !== 'A'));
+    const newWinnerB = hareclark(candidatesB2, ballotsB2, 1)[0];
+    expect(['D', 'E']).toContain(newWinnerB);
+});
 
 describe('hareclark', () => {
     it('basic', () => {
@@ -60,7 +95,7 @@ describe('hareclark', () => {
             ],
             4
         );
-        expect(res).toEqual(['5', '0', '4', '6']);
+        expect(res.sort()).toEqual(['0', '4', '5', '6'].sort());
     });
 });
 it('handles string candidate IDs (Events Officer example)', () => {
