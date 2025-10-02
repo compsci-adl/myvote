@@ -36,7 +36,6 @@ export default function Results({ electionId }: ResultsProps) {
     // Fetch election results
     const fetchResults = useSWRMutation(`results/${electionId}`, fetcher.get.mutate, {
         onSuccess: (data) => {
-            console.log('Fetched election results:', data);
             setResults(data.results);
         },
     });

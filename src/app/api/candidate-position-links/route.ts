@@ -17,8 +17,6 @@ export async function GET(req: NextRequest) {
         .from(candidatePositionLinks)
         .where(eq(candidatePositionLinks.position_id, position_id));
 
-    console.log('[DEBUG] /api/candidate-position-links links:', links);
-
     // For each link, get the candidate info
     const candidatesForLinks = [];
     for (const link of links) {

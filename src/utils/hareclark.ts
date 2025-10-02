@@ -99,11 +99,5 @@ export function hareclark(
             }
         }
     }
-    // console.log('Full count results:');
-    // console.log('Votes:', votes);
-    // console.log('Elected candidates:', elected_candidates);
-    // console.log('Unavailable candidates:', unavailable_candidates);
-    // console.log('Ballots with weights:', ballots_with_weights);
-    // console.log('Quota:', quota);
     return elected_candidates;
 }

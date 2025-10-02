@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db/index';
-import { ballots, candidates, positions, candidatePositionLinks } from '@/db/schema';
+import { ballots, candidatePositionLinks, candidates, positions } from '@/db/schema';
 import { hareclark } from '@/utils/hareclark';
 
 interface ResultCandidate {
@@ -77,8 +77,6 @@ export async function GET(req: NextRequest) {
         grouped[posId].ballots.push(preferences);
     }
 
-    // Print grouped data for debugging
-    console.log('Grouped ballots by position:', JSON.stringify(grouped, null, 2));
     // For each position, run Hare-Clarke STV
     for (const pos of Object.values(grouped)) {
         // Only include candidates who are actually running for this position
@@ -156,16 +154,6 @@ export async function GET(req: NextRequest) {
         // @ts-expect-error: attach for debug only
         pos.bordaPoints = bordaPoints;
     }
-    // For each position, show candiateas with points
-    const debugCandidates = Object.values(grouped).map((pos) => ({
-        position_id: pos.position_id,
-        position_name: pos.position_name,
-        candidates: pos.candidates,
-        winners: pos.winners,
-        // @ts-expect-error: debug only
-        bordaPoints: pos.bordaPoints,
-    }));
-    // console.log('Candidates with Borda points (json):', JSON.stringify(debugCandidates, null, 2));
 
     // Remove vacancies, ballots, candidateIds from output
     const results: ResultPosition[] = Object.values(grouped).map(

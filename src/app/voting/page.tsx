@@ -123,7 +123,6 @@ export default function VotingPage() {
             for (const position of positions) {
                 const res = await fetch(`/api/candidate-position-links?position_id=${position.id}`);
                 const data = await res.json();
-                console.log('[DEBUG] Fetched candidate-position-links data:', data);
                 if (Array.isArray(data.candidate_position_links)) {
                     grouped[position.id] = data.candidate_position_links.map(
                         (link: {
