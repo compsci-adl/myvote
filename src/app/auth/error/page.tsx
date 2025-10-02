@@ -3,8 +3,9 @@
 import { Button } from '@heroui/react';
 import { useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
+import { Suspense } from 'react';
 
-export default function AuthError() {
+function AuthErrorContent() {
     const searchParams = useSearchParams();
     const error = searchParams.get('error');
 
@@ -30,5 +31,13 @@ export default function AuthError() {
                 Try Again
             </Button>
         </div>
+    );
+}
+
+export default function AuthError() {
+    return (
+        <Suspense fallback={null}>
+            <AuthErrorContent />
+        </Suspense>
     );
 }
