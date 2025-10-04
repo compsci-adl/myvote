@@ -1,4 +1,5 @@
 import { Button, Checkbox, Input } from '@heroui/react';
+import { useRef, useState } from 'react';
 
 interface Position {
     name: string;
@@ -21,6 +22,32 @@ interface PositionsProps {
             executive?: string;
         }
     >;
+    onCsvImport?: (positions: Position[]) => void;
+}
+
+// Robust CSV row parsing: handles quoted fields with commas
+function parseCsvRow(row: string): string[] {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < row.length; i++) {
+        const char = row[i];
+        if (char === '"') {
+            if (inQuotes && row[i + 1] === '"') {
+                current += '"';
+                i++;
+            } else {
+                inQuotes = !inQuotes;
+            }
+        } else if (char === ',' && !inQuotes) {
+            result.push(current);
+            current = '';
+        } else {
+            current += char;
+        }
+    }
+    result.push(current);
+    return result;
 }
 
 export default function Positions({
@@ -29,15 +56,92 @@ export default function Positions({
     updatePosition,
     removePosition,
     errors = {},
+    onCsvImport,
 }: PositionsProps) {
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [csvError, setCsvError] = useState<string | null>(null);
+
+    const handleCsvUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setCsvError(null);
+        const file = e.target.files?.[0];
+        if (!file) {
+            setCsvError('No file selected.');
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const text = event.target?.result as string;
+                const lines = text.split(/\r?\n/).filter(Boolean);
+                if (lines.length < 2) {
+                    setCsvError('CSV must have a header and at least one row.');
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                    return;
+                }
+                const header = lines[0].split(',').map((h) => h.trim().toLowerCase());
+                const nameIdx = header.indexOf('name');
+                const vacanciesIdx = header.indexOf('vacancies');
+                const descriptionIdx = header.indexOf('description');
+                const executiveIdx = header.indexOf('executive');
+                if (nameIdx === -1) {
+                    setCsvError('CSV must have a "name" column.');
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                    return;
+                }
+                const imported: Position[] = lines.slice(1).map((line) => {
+                    const cols = parseCsvRow(line);
+                    let executiveVal = false;
+                    if (executiveIdx !== -1 && cols[executiveIdx] !== undefined) {
+                        const val = cols[executiveIdx].trim().toLowerCase();
+                        if (val === 'yes') {
+                            executiveVal = true;
+                        } else if (val === 'no') {
+                            executiveVal = false;
+                        } else {
+                            executiveVal = false;
+                        }
+                    }
+                    return {
+                        name: cols[nameIdx]?.trim() || '',
+                        vacancies: parseInt(cols[vacanciesIdx] || '1', 10) || 1,
+                        description: cols[descriptionIdx]?.trim() || '',
+                        executive: executiveVal,
+                    };
+                });
+                if (imported.length === 0) {
+                    setCsvError('No positions found in CSV.');
+                } else if (onCsvImport) {
+                    onCsvImport(imported);
+                }
+            } catch {
+                setCsvError('Failed to parse CSV. Please check the file format.');
+            }
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        };
+        reader.readAsText(file);
+    };
+
     return (
         <div>
             <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-lg font-semibold">Positions</h2>
-                <Button color="primary" onPress={addPosition}>
-                    <span className="mr-0.5 text-2xl">+</span> Add Position
-                </Button>
+                <div className="flex gap-2">
+                    <Button color="primary" onPress={addPosition}>
+                        <span className="mr-0.5 text-2xl">+</span> Add Position
+                    </Button>
+                    <Button color="secondary" onPress={() => fileInputRef.current?.click()}>
+                        Import CSV
+                    </Button>
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".csv"
+                        style={{ display: 'none' }}
+                        onChange={handleCsvUpload}
+                    />
+                </div>
             </div>
+            {csvError && <div className="mb-2 text-red-500 text-sm">{csvError}</div>}
             <div className="flex flex-col gap-6">
                 {positions.map((position, index) => {
                     const positionErrors = errors[index] || {};
