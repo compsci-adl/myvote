@@ -74,21 +74,39 @@ export default function CandidatesPage() {
     useEffect(() => {
         const fetchAllCandidatesAndLinks = async () => {
             if (!firstElection.id || Object.keys(positions).length === 0) return;
-            // Aggregate candidates and their positions
+            const posIds = Object.keys(positions);
+            type CandidatePositionLink = {
+                candidate: Candidate;
+                position_id: string;
+            };
+            type CandidatePositionLinksResponse = {
+                candidate_position_links: CandidatePositionLink[];
+            };
+
+            const data = (await fetcher.post.mutate('/candidate-position-links', {
+                arg: { position_ids: posIds },
+            })) as CandidatePositionLinksResponse;
             const candidateMap: Record<string, Candidate & { positions: string[] }> = {};
-            for (const posId of Object.keys(positions)) {
-                const res = await fetch(`/api/candidate-position-links?position_id=${posId}`);
-                const data = await res.json();
-                if (Array.isArray(data.candidate_position_links)) {
-                    for (const link of data.candidate_position_links) {
-                        const candidate = link.candidate;
-                        if (!candidate) continue;
-                        if (!candidateMap[candidate.id]) {
-                            candidateMap[candidate.id] = {
-                                ...candidate,
-                                positions: [positions[posId].name],
-                            };
-                        } else {
+            if (
+                data &&
+                typeof data === 'object' &&
+                'candidate_position_links' in data &&
+                Array.isArray(data.candidate_position_links)
+            ) {
+                for (const link of data.candidate_position_links) {
+                    const candidate = link.candidate;
+                    const posId = link.position_id;
+                    if (!candidate) continue;
+                    if (!candidateMap[candidate.id]) {
+                        candidateMap[candidate.id] = {
+                            ...candidate,
+                            positions: [positions[posId]?.name].filter(Boolean),
+                        };
+                    } else {
+                        if (
+                            positions[posId]?.name &&
+                            !candidateMap[candidate.id].positions.includes(positions[posId].name)
+                        ) {
                             candidateMap[candidate.id].positions.push(positions[posId].name);
                         }
                     }

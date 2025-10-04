@@ -164,37 +164,41 @@ export default function VotingPage() {
         }
     );
 
-    // Fetch candidates for each position using candidate-position-links
+    // Batch fetch all candidates for all positions using candidate-position-links
     useEffect(() => {
         if (!firstElection?.id || positions.length === 0 || hasVoted) return;
-        const fetchCandidatesForPositions = async () => {
+        type CandidatePositionLink = {
+            candidate: Candidate;
+            position_id: string | number;
+        };
+        type CandidatePositionLinksResponse = {
+            candidate_position_links: CandidatePositionLink[];
+        };
+        const fetchAllCandidatesAndLinks = async () => {
+            const posIds = positions.map((p) => p.id);
+            const data = (await fetcher.post.mutate('/candidate-position-links', {
+                arg: { position_ids: posIds },
+            })) as CandidatePositionLinksResponse;
             const grouped: Record<string, Candidate[]> = {};
-            for (const position of positions) {
-                const res = await fetch(`/api/candidate-position-links?position_id=${position.id}`);
-                const data = await res.json();
-                if (Array.isArray(data.candidate_position_links)) {
-                    grouped[position.id] = data.candidate_position_links.map(
-                        (link: {
-                            candidate_id: string;
-                            position_id: number;
-                            candidate: {
-                                id: string;
-                                name: string;
-                                statement?: string;
-                                nominations?: string[];
-                            };
-                        }) => ({
-                            id: link.candidate?.id || link.candidate_id,
-                            name: link.candidate?.name || '',
-                            statement: link.candidate?.statement || '',
-                            nominations: link.candidate?.nominations || [],
-                        })
-                    );
+            if (
+                data &&
+                typeof data === 'object' &&
+                'candidate_position_links' in data &&
+                Array.isArray(data.candidate_position_links)
+            ) {
+                for (const link of data.candidate_position_links) {
+                    const candidate = link.candidate;
+                    const posId = link.position_id;
+                    if (!candidate) continue;
+                    if (!grouped[posId]) {
+                        grouped[posId] = [];
+                    }
+                    grouped[posId].push(candidate);
                 }
             }
             setCandidates(grouped);
         };
-        fetchCandidatesForPositions();
+        fetchAllCandidatesAndLinks();
     }, [firstElection, positions, hasVoted]);
 
     // Handle form submit
@@ -218,18 +222,16 @@ export default function VotingPage() {
             preferences: (candidates[positionId] ?? []).map((candidate) => candidate.id),
         }));
 
-        // Submit each ballot individually as required by backend
-        for (const vote of voteData) {
-            const voteRequest = {
-                student_id: studentId,
-                keycloak_id: studentId, // Ensure keycloak_id is sent for membership check
-                election: firstElection ? firstElection.id : undefined,
-                name: studentName,
-                position: vote.position,
-                preferences: vote.preferences,
-            };
-            await submitVote.trigger(voteRequest);
-        }
+        // Submit all ballots in a single batch request
+        const batchVotes = voteData.map((vote) => ({
+            student_id: studentId,
+            keycloak_id: studentId, // Ensure keycloak_id is sent for membership check
+            election: firstElection ? firstElection.id : undefined,
+            name: studentName,
+            position: vote.position,
+            preferences: vote.preferences,
+        }));
+        await submitVote.trigger(batchVotes);
         onClose();
     };
 
