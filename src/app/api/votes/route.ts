@@ -6,13 +6,17 @@ import { memberDb, memberTable } from '@/db/member';
 import { ballots, positions, voters } from '@/db/schema';
 
 export async function GET(req: NextRequest) {
-    // Expect /api/votes?election_id=123
+    // Expect /api/votes?election_id=123&student_id=abc
     const { searchParams } = new URL(req.url);
     const election_id = searchParams.get('election_id');
+    const student_id = searchParams.get('student_id');
     if (!election_id) {
         return NextResponse.json({ error: 'Missing election_id' }, { status: 400 });
     }
-    // Query ballots joined to positions, filter by election_id
+    if (!student_id) {
+        return NextResponse.json({ error: 'Missing student_id' }, { status: 400 });
+    }
+    // Query ballots joined to positions and voters, filter by election_id and student_id
     const data = await db
         .select({
             ballot: ballots,
@@ -20,7 +24,8 @@ export async function GET(req: NextRequest) {
         })
         .from(ballots)
         .innerJoin(positions, eq(ballots.position, positions.id))
-        .where(eq(positions.election_id, election_id));
+        .innerJoin(voters, eq(ballots.voter_id, voters.id))
+        .where(and(eq(positions.election_id, election_id), eq(voters.student_id, student_id)));
     return NextResponse.json(data, { status: 200 });
 }
 
