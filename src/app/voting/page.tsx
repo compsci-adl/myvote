@@ -34,6 +34,7 @@ export default function VotingPage() {
     // Removed unused positionVotes state
     const [statusMessage, setStatusMessage] = useState<string>('');
     const [candidates, setCandidates] = useState<Record<string, Candidate[]>>({});
+    const [candidatesLoading, setCandidatesLoading] = useState(true);
 
     // Get student info from session
     const studentId = session?.user?.id; // This will be the Keycloak ID
@@ -59,7 +60,7 @@ export default function VotingPage() {
                 const data = await res.json();
                 // If membership found and not expired, allow voting
                 setIsMember(Array.isArray(data) && data.length > 0);
-            } catch (e) {
+            } catch {
                 setIsMember(false);
             }
         };
@@ -79,7 +80,7 @@ export default function VotingPage() {
                 // If any ballot for this student, mark as voted
                 const voted = Array.isArray(data) && data.length > 0;
                 setHasVoted(voted);
-            } catch (e) {
+            } catch {
                 setHasVoted(false);
             }
         };
@@ -107,7 +108,15 @@ export default function VotingPage() {
         if (positionsData && Array.isArray(positionsData.positions)) {
             setPositions(positionsData.positions);
         }
+        // Show skeleton while waiting for positions
+        if (!positionsData) {
+            setCandidatesLoading(true);
+        }
     }, [positionsData]);
+
+    useEffect(() => {
+        setCandidatesLoading(true);
+    }, []);
 
     useEffect(() => {
         if (electionsLoading) return;
@@ -175,28 +184,36 @@ export default function VotingPage() {
             candidate_position_links: CandidatePositionLink[];
         };
         const fetchAllCandidatesAndLinks = async () => {
-            const posIds = positions.map((p) => p.id);
-            const data = (await fetcher.post.mutate('/candidate-position-links', {
-                arg: { position_ids: posIds },
-            })) as CandidatePositionLinksResponse;
-            const grouped: Record<string, Candidate[]> = {};
-            if (
-                data &&
-                typeof data === 'object' &&
-                'candidate_position_links' in data &&
-                Array.isArray(data.candidate_position_links)
-            ) {
-                for (const link of data.candidate_position_links) {
-                    const candidate = link.candidate;
-                    const posId = link.position_id;
-                    if (!candidate) continue;
-                    if (!grouped[posId]) {
-                        grouped[posId] = [];
+            // Only show skeleton if there are positions to fetch for
+            if (!positions.length) return;
+            setCandidatesLoading(true);
+            try {
+                const posIds = positions.map((p) => p.id);
+                const data = (await fetcher.post.mutate('/candidate-position-links', {
+                    arg: { position_ids: posIds },
+                })) as CandidatePositionLinksResponse;
+                const grouped: Record<string, Candidate[]> = {};
+                if (
+                    data &&
+                    typeof data === 'object' &&
+                    'candidate_position_links' in data &&
+                    Array.isArray(data.candidate_position_links)
+                ) {
+                    for (const link of data.candidate_position_links) {
+                        const candidate = link.candidate;
+                        const posId = link.position_id;
+                        if (!candidate) continue;
+                        if (!grouped[posId]) {
+                            grouped[posId] = [];
+                        }
+                        grouped[posId].push(candidate);
                     }
-                    grouped[posId].push(candidate);
                 }
+                setCandidates(grouped);
+            } finally {
+                // Only hide skeletons if positions are loaded
+                if (positions.length) setCandidatesLoading(false);
             }
-            setCandidates(grouped);
         };
         fetchAllCandidatesAndLinks();
     }, [firstElection, positions, hasVoted]);
@@ -247,6 +264,13 @@ export default function VotingPage() {
               ? statusMap[statusVal]
               : Number(statusVal);
     const isElectionClosed = statusNum === 4 || statusNum === 5;
+    // Show placeholder position sections if loading and no positions yet
+    const showPlaceholderPositions = candidatesLoading && positions.length === 0;
+    const placeholderPositions = Array.from({ length: 3 }).map((_, i) => ({
+        id: -(i + 1), // negative numbers to avoid collision with real ids
+        name: 'Loading...',
+    }));
+
     return (
         <div className="container mx-auto px-4 py-8">
             {message ? (
@@ -264,21 +288,32 @@ export default function VotingPage() {
             ) : (
                 <>
                     <h1 className="mb-8 text-center text-3xl font-bold">Voting</h1>
-                    {positions.map((position, index) => (
-                        <PositionSection
-                            key={index}
-                            position={position}
-                            candidates={candidates}
-                            setCandidates={setCandidates}
-                        />
-                    ))}
+                    {(showPlaceholderPositions ? placeholderPositions : positions).map(
+                        (position) => (
+                            <PositionSection
+                                key={position.id}
+                                position={position}
+                                candidates={candidates}
+                                setCandidates={setCandidates}
+                                loading={candidatesLoading}
+                            />
+                        )
+                    )}
                     <Divider />
-                    {positions.length > 0 && (
+                    {candidatesLoading ? (
                         <div className="mb-8 mt-8 flex justify-center">
-                            <Button onPress={onOpen} className="bg-primary p-7 text-xl">
-                                Submit
-                            </Button>
+                            <div className="rounded-2xl bg-primary w-30 h-16 flex items-center justify-center animate-pulse">
+                                <div className="w-16 h-6 bg-orange-300 rounded"></div>
+                            </div>
                         </div>
+                    ) : (
+                        positions.length > 0 && (
+                            <div className="mb-8 mt-8 flex justify-center">
+                                <Button onPress={onOpen} className="bg-primary p-7 text-xl">
+                                    Submit
+                                </Button>
+                            </div>
+                        )
                     )}
                     <Modal size="md" isOpen={isOpen} onClose={onClose}>
                         <ModalContent>

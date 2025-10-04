@@ -34,6 +34,7 @@ export default function CandidatesPage() {
     >({});
     const [positions, setPositions] = useState<Record<string, Position>>({});
     const [message, setMessage] = useState('');
+    const [loading, setLoading] = useState(true);
 
     // Elections API returns array of elections
     const fetchElections = useSWRMutation('/elections', fetcher.get.mutate, {
@@ -72,8 +73,12 @@ export default function CandidatesPage() {
 
     // Fetch all candidates and their positions for the election
     useEffect(() => {
+        setLoading(true);
         const fetchAllCandidatesAndLinks = async () => {
-            if (!firstElection.id || Object.keys(positions).length === 0) return;
+            if (!firstElection.id || !positions || Object.keys(positions).length === 0) {
+                setCandidates({});
+                return;
+            }
             const posIds = Object.keys(positions);
             type CandidatePositionLink = {
                 candidate: Candidate;
@@ -113,6 +118,7 @@ export default function CandidatesPage() {
                 }
             }
             setCandidates(candidateMap);
+            setLoading(false);
         };
         fetchAllCandidatesAndLinks();
     }, [firstElection.id, positions]);
@@ -139,6 +145,20 @@ export default function CandidatesPage() {
                 {message ? (
                     <div className="flex min-h-screen items-center justify-center">
                         <p className="text-center text-xl">{message}</p>
+                    </div>
+                ) : loading ? (
+                    <div className="w-full max-w-4xl">
+                        {Array.from({ length: 6 }).map((_, i) => (
+                            <div key={i} className="py-6 border-b-gray-300 border-b-1">
+                                <div className="flex flex-row items-center gap-4 animate-pulse">
+                                    <div className="flex-1">
+                                        <div className="h-7 w-56 bg-gray-200 rounded mb-1"></div>
+                                        <div className="h-5 w-40 bg-gray-100 rounded"></div>
+                                    </div>
+                                    <div className="w-6 h-6 bg-gray-200 ml-2"></div>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 ) : (
                     <Accordion defaultExpandedKeys={focusedUsers} className="w-full max-w-4xl">

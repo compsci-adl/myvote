@@ -138,12 +138,17 @@ export const PositionSection = ({
     position,
     candidates,
     setCandidates,
+    loading = false,
 }: {
     position: Position;
     candidates: Record<number, Candidate[]>;
     setCandidates: React.Dispatch<React.SetStateAction<Record<number, Candidate[]>>>;
+    loading?: boolean;
 }) => {
     // Use candidates passed from parent, do not refetch here
+    const showSkeletons = loading;
+    const showCandidates =
+        !loading && candidates[position.id] && candidates[position.id].length > 0;
 
     return (
         <>
@@ -153,19 +158,29 @@ export const PositionSection = ({
                 <div className="flex-grow border-t border-gray-400"></div>
             </div>
             <div className="grid grid-cols-[repeat(auto-fill,minmax(100px,250px))] items-center justify-center">
-                {candidates[position.id] && candidates[position.id].length > 0 ? (
-                    candidates[position.id].map((c, i) => (
-                        <CandidateCard
-                            key={c.id}
-                            i={i}
-                            c={{ ...c, position }}
-                            candidates={candidates}
-                            setCandidates={setCandidates}
-                        />
-                    ))
-                ) : (
-                    <p className="text-center">No candidates available</p>
-                )}
+                {showSkeletons
+                    ? Array.from({ length: 4 }).map((_, i) => (
+                          <div
+                              key={i}
+                              className="m-3 bg-primary-100 p-3 rounded-2xl flex flex-col items-start justify-center min-h-[100px] min-w-[220px] shadow animate-pulse"
+                          >
+                              <div className="text-lg font-semibold text-gray-400 mb-2">
+                                  {i + 1}
+                              </div>
+                              <div className="w-32 h-6 bg-gray-200 rounded mt-2 mx-auto self-center"></div>
+                          </div>
+                      ))
+                    : showCandidates
+                      ? candidates[position.id].map((c, i) => (
+                            <CandidateCard
+                                key={c.id}
+                                i={i}
+                                c={{ ...c, position }}
+                                candidates={candidates}
+                                setCandidates={setCandidates}
+                            />
+                        ))
+                      : null}
             </div>
         </>
     );
