@@ -6,6 +6,7 @@ import { useState } from 'react';
 import useSWRMutation from 'swr/mutation';
 
 import { fetcher } from '../lib/fetcher';
+
 import { usePositions } from './usePositions';
 
 interface Position {
@@ -218,7 +219,10 @@ export default function ClosedNominations({ electionId, setSliderValue }: Closed
             )}
             <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
                 {nominations.map((nomination, index) => (
-                    <div key={index} className="flex flex-col gap-4 rounded-xl bg-gray-200 p-4">
+                    <div
+                        key={index}
+                        className="flex flex-col gap-4 rounded-xl bg-gray-200 dark:bg-gray-900 p-4"
+                    >
                         <p>
                             <strong>Name:</strong> {nomination.name}
                         </p>

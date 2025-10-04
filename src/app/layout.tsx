@@ -38,7 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     fontSans.variable
                 )}
             >
-                <Providers themeProps={{ attribute: 'class', defaultTheme: 'dark' }}>
+                <Providers themeProps={{ attribute: 'class', defaultTheme: 'light' }}>
                     <Header />
                     <main className="mx-auto max-w-screen-xl space-y-4 px-2 py-4">
                         {children}

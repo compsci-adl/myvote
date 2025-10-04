@@ -1,8 +1,10 @@
 'use client';
 
 import { Button } from '@heroui/react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import useSWRMutation from 'swr/mutation';
+
+import { useMount } from '@/hooks/use-mount';
 
 import { fetcher } from '../lib/fetcher';
 
@@ -58,7 +60,7 @@ export default function OpenNominations({ electionId, setSliderValue }: OpenNomi
         }
     );
 
-    useEffect(() => {
+    useMount(() => {
         fetchedPositions.trigger();
     });
 
@@ -77,7 +79,10 @@ export default function OpenNominations({ electionId, setSliderValue }: OpenNomi
             <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
                 {positions &&
                     Object.values(positions).map((position, index) => (
-                        <div key={index} className="flex flex-col gap-4 rounded-xl bg-gray-200 p-4">
+                        <div
+                            key={index}
+                            className="flex flex-col gap-4 rounded-xl bg-gray-200 dark:bg-gray-900 p-4"
+                        >
                             <span className="flex gap-2">
                                 <h2 className="text-l font-bold">Position Name:</h2>
                                 <p>{position.name}</p>

@@ -167,6 +167,7 @@ const ElectionSetup = ({ setSliderValue, setSelectedElection }: ElectionSetupPro
                 updatePosition={updatePosition}
                 removePosition={removePosition}
                 errors={errors.positions}
+                onCsvImport={setPositions}
             />
             <div className="flex justify-center">
                 <Button color="primary" className="mt-4" onPress={handleSubmit}>

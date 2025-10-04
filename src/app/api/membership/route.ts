@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
         } else {
             return NextResponse.json({ error: 'Member not found' }, { status: 404 });
         }
-    } catch (e) {
+    } catch {
         return NextResponse.json({ error: 'Server error' }, { status: 500 });
     }
 }

@@ -103,7 +103,7 @@ export default function Results({ electionId }: ResultsProps) {
             {results.length === 0 && !isValidating && <p>No results found.</p>}
 
             {multiWinners.length > 0 && !finalized && (
-                <div className="mb-6 p-4 border rounded bg-yellow-50">
+                <div className="mb-6 p-4 border rounded bg-yellow-50 dark:bg-yellow-900/30 dark:border-yellow-700/50">
                     <h2 className="text-lg font-semibold mb-2">Multiple Position Winners</h2>
                     <p className="mb-2">
                         The following candidates have won more than one position. Please select
@@ -158,11 +158,15 @@ export default function Results({ electionId }: ResultsProps) {
                 return (
                     <div
                         key={position.position_id}
-                        className="mb-6 rounded-lg border p-4 shadow-md"
+                        className="mb-6 rounded-lg border p-4 shadow-md dark:bg-gray-900 dark:border-gray-700"
                     >
-                        <h2 className="text-xl font-semibold">{position.position_name}</h2>
+                        <h2 className="text-xl font-semibold dark:text-white">
+                            {position.position_name}
+                        </h2>
 
-                        <h3 className="mt-2 font-medium text-green-600">Winner(s):</h3>
+                        <h3 className="mt-2 font-medium text-green-600 dark:text-green-400">
+                            Winner(s):
+                        </h3>
                         {winners.length > 0 ? (
                             <ul className="list-disc pl-5">
                                 {winners.map((winner) => (
@@ -175,10 +179,12 @@ export default function Results({ electionId }: ResultsProps) {
                             <div className="pl-5 italic text-gray-500">No winner(s)</div>
                         )}
 
-                        <h3 className="mt-4 font-medium text-gray-700">All Candidates:</h3>
-                        <table className="mt-2 w-full border-collapse border border-gray-300">
+                        <h3 className="mt-4 font-medium text-gray-700 dark:text-gray-200">
+                            All Candidates:
+                        </h3>
+                        <table className="mt-2 w-full border-collapse border border-gray-300 dark:border-gray-700">
                             <thead>
-                                <tr className="bg-gray-200">
+                                <tr className="bg-gray-200 dark:bg-gray-900">
                                     <th className="border p-2">Ranking</th>
                                     <th className="border p-2">Candidate</th>
                                     <th className="border p-2">Total Points</th>

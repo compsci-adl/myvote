@@ -33,8 +33,15 @@ export async function POST(req: NextRequest) {
     }
     const body = await req.json();
 
+    // Batch voting logic
+    const votesArray = Array.isArray(body) ? body : [body];
+    if (votesArray.length === 0) {
+        return NextResponse.json({ error: 'No votes provided' }, { status: 400 });
+    }
+
     // Membership check: require valid keycloak_id and active membership (from memberDb)
-    if (!body.keycloak_id) {
+    const keycloak_id = votesArray[0]?.keycloak_id;
+    if (!keycloak_id) {
         return NextResponse.json({ error: 'Missing keycloak_id in request.' }, { status: 400 });
     }
     const member = await memberDb
@@ -42,7 +49,7 @@ export async function POST(req: NextRequest) {
         .from(memberTable)
         .where(
             and(
-                eq(memberTable.keycloakId, body.keycloak_id),
+                eq(memberTable.keycloakId, keycloak_id),
                 gt(memberTable.membershipExpiresAt, new Date())
             )
         )
@@ -53,44 +60,12 @@ export async function POST(req: NextRequest) {
             { status: 403 }
         );
     }
-    // Use the studentId from the member record for the voter table
+    // Use the studentId and name from the member record for the voter table
     const realStudentId = member.studentId;
-    if (!realStudentId) {
+    const realName = member.firstName + ' ' + member.lastName;
+    if (!realStudentId || !realName) {
         return NextResponse.json(
-            { error: 'No student ID found for this member.' },
-            { status: 400 }
-        );
-    }
-
-    // Check if a ballot already exists for this voter, election, and position
-    const existingVoterRecord = await db
-        .select()
-        .from(voters)
-        .where(eq(voters.student_id, realStudentId))
-        .then((rows) => rows.find((v) => v.election === election_id));
-    if (existingVoterRecord) {
-        const existingBallot = await db
-            .select()
-            .from(ballots)
-            .where(eq(ballots.voter_id, existingVoterRecord.id))
-            .then((rows) => rows.find((b) => b.position === body.position));
-        if (existingBallot) {
-            return NextResponse.json(
-                { error: 'You have already voted for this position.' },
-                { status: 409 }
-            );
-        }
-    }
-
-    // Validate that the position belongs to the election
-    const pos = await db
-        .select()
-        .from(positions)
-        .where(eq(positions.id, body.position))
-        .then((rows) => rows[0]);
-    if (!pos || pos.election_id !== election_id) {
-        return NextResponse.json(
-            { error: 'Position does not belong to election' },
+            { error: 'No student ID or name found for this member.' },
             { status: 400 }
         );
     }
@@ -108,31 +83,48 @@ export async function POST(req: NextRequest) {
             .insert(voters)
             .values({
                 id: uuid,
-                election: election_id,
                 student_id: realStudentId,
-                name: body.name,
+                election: election_id,
+                name: realName,
             })
             .returning();
-        // Handle both array and ResultSet
         voter = Array.isArray(inserted) ? inserted[0] : inserted;
     }
-
-    // Generate a UUID for ballot id if not provided
-    const ballotId = body.id ?? crypto.randomUUID();
-
-    // Insert ballot into sqlite db using drizzle
     if (!voter) {
         return NextResponse.json({ error: 'Failed to create or find voter' }, { status: 500 });
     }
-    const vote = await db
-        .insert(ballots)
-        .values({
-            id: ballotId,
-            voter_id: voter.id,
-            position: body.position,
-            preferences: body.preferences,
-            // submitted will default
-        })
-        .returning();
-    return NextResponse.json(vote, { status: 201 });
+
+    // Batch insert votes in groups of 20
+    const batchSize = 20;
+    const insertedVotes = [];
+    for (let i = 0; i < votesArray.length; i += batchSize) {
+        const batch = votesArray.slice(i, i + batchSize);
+        for (const voteData of batch) {
+            // Check if already voted for this position
+            const existingBallot = await db
+                .select()
+                .from(ballots)
+                .where(eq(ballots.voter_id, voter.id))
+                .then((rows) => rows.find((b) => b.position === voteData.position));
+            if (existingBallot) {
+                insertedVotes.push({
+                    error: 'Already voted for this position',
+                    position: voteData.position,
+                });
+                continue;
+            }
+            const ballotId = crypto.randomUUID();
+            const [vote] = await db
+                .insert(ballots)
+                .values({
+                    id: ballotId,
+                    voter_id: voter.id,
+                    position: voteData.position,
+                    preferences: voteData.preferences,
+                })
+                .returning();
+            insertedVotes.push(vote);
+        }
+    }
+    return NextResponse.json(insertedVotes, { status: 201 });
 }
