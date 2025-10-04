@@ -46,32 +46,41 @@ export async function POST(req: NextRequest) {
         if (!positionIds.length) {
             return NextResponse.json({ error: 'No position_ids provided' }, { status: 400 });
         }
-        // Batch in groups of 20
-        const batchSize = 20;
-        const allLinks: Array<{ candidate_id: string; position_id: string; candidate: unknown }> =
-            [];
-        for (let i = 0; i < positionIds.length; i += batchSize) {
-            const batch = positionIds.slice(i, i + batchSize);
-            const links = await db
+        // Fetch all links for all positions in one go
+        const links = await db
+            .select()
+            .from(candidatePositionLinks)
+            .where(inArray(candidatePositionLinks.position_id, positionIds));
+
+        // Collect all unique candidate IDs
+        const candidateIds = Array.from(
+            new Set(links.map((l) => String(l.candidate_id)).filter(Boolean))
+        );
+
+        // Fetch all candidates in one query
+        let candidatesList: unknown[] = [];
+        if (candidateIds.length > 0) {
+            candidatesList = await db
                 .select()
-                .from(candidatePositionLinks)
-                .where(inArray(candidatePositionLinks.position_id, batch));
-            // For each link, get the candidate info
-            for (const link of links) {
-                if (!link.candidate_id) continue;
-                const candidate = await db
-                    .select()
-                    .from(candidates)
-                    .where(eq(candidates.id, String(link.candidate_id)));
-                if (candidate && candidate.length > 0) {
-                    allLinks.push({
-                        candidate_id: link.candidate_id,
-                        position_id: link.position_id,
-                        candidate: candidate[0],
-                    });
-                }
-            }
+                .from(candidates)
+                .where(inArray(candidates.id, candidateIds));
         }
+        // Map candidates by id for quick lookup
+        const candidateMap = new Map<string, Record<string, unknown>>();
+        for (const cand of candidatesList) {
+            const candidate = cand as { id: string };
+            candidateMap.set(String(candidate.id), candidate);
+        }
+
+        // Build response
+        const allLinks = links
+            .filter((link) => link.candidate_id && candidateMap.has(String(link.candidate_id)))
+            .map((link) => ({
+                candidate_id: link.candidate_id,
+                position_id: link.position_id,
+                candidate: candidateMap.get(String(link.candidate_id)),
+            }));
+
         return NextResponse.json({ candidate_position_links: allLinks }, { status: 200 });
     }
 
