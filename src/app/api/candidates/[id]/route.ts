@@ -15,23 +15,30 @@ export async function POST(req: NextRequest) {
     if (!Array.isArray(body)) {
         return NextResponse.json({ error: 'Body must be an array of candidates' }, { status: 400 });
     }
-    // Insert each candidate
-    const results = [];
-    for (const candidate of body) {
-        if (!candidate.name) continue;
-        const id = crypto.randomUUID();
-        const { name, statement } = candidate;
-        results.push(
-            await db
-                .insert(candidates)
-                .values({
-                    id,
+    // Batch insert for performance and reliability
+    const BATCH_SIZE = 20;
+    const allResults = [];
+    try {
+        for (let i = 0; i < body.length; i += BATCH_SIZE) {
+            const batch = body
+                .slice(i, i + BATCH_SIZE)
+                .filter((candidate) => candidate && candidate.name)
+                .map((candidate) => ({
+                    id: crypto.randomUUID(),
                     election: election_id,
-                    name,
-                    statement,
-                })
-                .returning()
+                    name: candidate.name,
+                    statement: candidate.statement,
+                }));
+            if (batch.length === 0) continue;
+            const inserted = await db.insert(candidates).values(batch).returning();
+            allResults.push(...inserted);
+        }
+        return NextResponse.json(allResults, { status: 201 });
+    } catch (err) {
+        console.error('Failed to insert candidates:', err);
+        return NextResponse.json(
+            { error: 'Failed to insert candidates', details: String(err) },
+            { status: 500 }
         );
     }
-    return NextResponse.json(results.flat(), { status: 201 });
 }
