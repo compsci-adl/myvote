@@ -24,7 +24,7 @@ export default function WelcomePage() {
                             'Please pay for your membership on the CS Club Website first. Then logout and login again.'
                         );
                     }
-                } catch (error) {
+                } catch {
                     alert(
                         'Please create an account on the CS Club Website first and pay for your membership. Then logout and login again.'
                     );
