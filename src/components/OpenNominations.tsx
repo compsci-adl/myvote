@@ -1,8 +1,10 @@
 'use client';
 
 import { Button } from '@heroui/react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import useSWRMutation from 'swr/mutation';
+
+import { useMount } from '@/hooks/use-mount';
 
 import { fetcher } from '../lib/fetcher';
 
@@ -58,7 +60,7 @@ export default function OpenNominations({ electionId, setSliderValue }: OpenNomi
         }
     );
 
-    useEffect(() => {
+    useMount(() => {
         fetchedPositions.trigger();
     });
 
