@@ -167,7 +167,7 @@ export const PositionSection = ({
                               <div className="text-lg font-semibold text-gray-400 mb-2">
                                   {i + 1}
                               </div>
-                              <div className="w-32 h-6 bg-gray-200 rounded mt-2 mx-auto self-center"></div>
+                              <div className="w-32 h-6 bg-gray-200 dark:bg-gray-900 rounded mt-2 mx-auto self-center"></div>
                           </div>
                       ))
                     : showCandidates

@@ -146,7 +146,10 @@ export default function Positions({
                 {positions.map((position, index) => {
                     const positionErrors = errors[index] || {};
                     return (
-                        <div key={index} className="flex flex-col gap-4 rounded-xl bg-gray-200 p-4">
+                        <div
+                            key={index}
+                            className="flex flex-col gap-4 rounded-xl bg-gray-200 dark:bg-gray-900 p-4"
+                        >
                             <Input
                                 label="Position Name"
                                 placeholder="Enter position name"

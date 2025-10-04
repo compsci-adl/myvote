@@ -107,8 +107,8 @@ export default function ChooseElection({
                                     key={election.id}
                                     className={`cursor-pointer rounded-xl p-4 ${
                                         selectedElection?.id === election.id
-                                            ? 'bg-blue-200'
-                                            : 'bg-gray-200'
+                                            ? 'bg-blue-200 dark:bg-blue-400'
+                                            : 'bg-gray-200 dark:bg-gray-900'
                                     }`}
                                     onClick={() => setSelectedElection(election)}
                                 >
