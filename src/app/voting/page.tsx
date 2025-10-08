@@ -39,7 +39,7 @@ export default function VotingPage() {
     // Get student info from session
     const keycloakId = session?.user?.id;
     const studentName = session?.user?.name;
-    const [studentId, setStudentId] = useState<string | null>(null);
+    const [studentId, setStudentId] = useState<string | null | undefined>(undefined);
 
     // Fetch studentId from member table
     useEffect(() => {
@@ -297,15 +297,37 @@ export default function VotingPage() {
               : Number(statusVal);
     const isElectionClosed = statusNum === 4 || statusNum === 5;
     // Show placeholder position sections if loading and no positions yet
-    const showPlaceholderPositions = candidatesLoading && positions.length === 0;
     const placeholderPositions = Array.from({ length: 3 }).map((_, i) => ({
         id: -(i + 1), // negative numbers to avoid collision with real ids
         name: 'Loading...',
     }));
 
+    const isLoadingStudentId = typeof studentId === 'undefined';
+    const isLoadingAll =
+        isLoadingStudentId || (studentId !== null && positions.length === 0 && candidatesLoading);
+
     return (
         <div className="container mx-auto px-4 py-8">
-            {studentId === null ? (
+            {isLoadingAll ? (
+                <>
+                    <h1 className="mb-8 text-center text-3xl font-bold">Voting</h1>
+                    {placeholderPositions.map((position) => (
+                        <PositionSection
+                            key={position.id}
+                            position={position}
+                            candidates={{}}
+                            setCandidates={() => {}}
+                            loading={true}
+                        />
+                    ))}
+                    <Divider />
+                    <div className="mb-8 mt-8 flex justify-center">
+                        <div className="rounded-2xl bg-primary w-30 h-16 flex items-center justify-center animate-pulse">
+                            <div className="w-16 h-6 bg-orange-300 rounded"></div>
+                        </div>
+                    </div>
+                </>
+            ) : studentId === null ? (
                 <div className="flex min-h-screen items-center justify-center">
                     <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-6 rounded text-center max-w-xl">
                         <h2 className="text-2xl font-bold mb-2">Student ID Not Found</h2>
@@ -335,17 +357,15 @@ export default function VotingPage() {
             ) : (
                 <>
                     <h1 className="mb-8 text-center text-3xl font-bold">Voting</h1>
-                    {(showPlaceholderPositions ? placeholderPositions : positions).map(
-                        (position) => (
-                            <PositionSection
-                                key={position.id}
-                                position={position}
-                                candidates={candidates}
-                                setCandidates={setCandidates}
-                                loading={candidatesLoading}
-                            />
-                        )
-                    )}
+                    {positions.map((position) => (
+                        <PositionSection
+                            key={position.id}
+                            position={position}
+                            candidates={candidates}
+                            setCandidates={setCandidates}
+                            loading={candidatesLoading}
+                        />
+                    ))}
                     <Divider />
                     {candidatesLoading ? (
                         <div className="mb-8 mt-8 flex justify-center">
