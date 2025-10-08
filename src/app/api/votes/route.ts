@@ -3,25 +3,45 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db/index';
 import { memberDb, memberTable } from '@/db/member';
-import { ballots, positions, voters } from '@/db/schema';
+import { ballots, voters } from '@/db/schema';
 
 export async function GET(req: NextRequest) {
-    // Expect /api/votes?election_id=123
+    // Expect /api/votes?election_id=123&student_id=abc
     const { searchParams } = new URL(req.url);
     const election_id = searchParams.get('election_id');
+    const student_id = searchParams.get('student_id');
     if (!election_id) {
         return NextResponse.json({ error: 'Missing election_id' }, { status: 400 });
     }
-    // Query ballots joined to positions, filter by election_id
-    const data = await db
-        .select({
-            ballot: ballots,
-            position: positions,
-        })
-        .from(ballots)
-        .innerJoin(positions, eq(ballots.position, positions.id))
-        .where(eq(positions.election_id, election_id));
-    return NextResponse.json(data, { status: 200 });
+    if (student_id) {
+        // Look up actual student number from member table
+        const member = await memberDb
+            .select()
+            .from(memberTable)
+            .where(eq(memberTable.studentId, student_id))
+            .then((rows) => rows[0]);
+        if (!member) {
+            return NextResponse.json({ error: 'Member not found' }, { status: 404 });
+        }
+        // Find voter record for this student and election
+        const voter = await db
+            .select()
+            .from(voters)
+            .where(and(eq(voters.student_id, student_id), eq(voters.election, election_id)))
+            .then((rows) => rows[0]);
+        if (!voter) {
+            return NextResponse.json({ voted: false, ballots: [] }, { status: 200 });
+        }
+        // Find ballots for this voter
+        const ballotsForVoter = await db
+            .select()
+            .from(ballots)
+            .where(eq(ballots.voter_id, voter.id));
+        const voted = ballotsForVoter.length > 0;
+        return NextResponse.json({ voted }, { status: 200 });
+    } else {
+        return NextResponse.json({ error: 'Missing student_id' }, { status: 400 });
+    }
 }
 
 export async function POST(req: NextRequest) {

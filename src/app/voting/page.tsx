@@ -37,8 +37,35 @@ export default function VotingPage() {
     const [candidatesLoading, setCandidatesLoading] = useState(true);
 
     // Get student info from session
-    const studentId = session?.user?.id; // This will be the Keycloak ID
+    const keycloakId = session?.user?.id;
     const studentName = session?.user?.name;
+    const [studentId, setStudentId] = useState<string | null>(null);
+
+    // Fetch studentId from member table
+    useEffect(() => {
+        if (!keycloakId) return;
+        const fetchStudentId = async () => {
+            try {
+                const res = await fetch(`/api/membership?keycloak_id=${keycloakId}`);
+                const data = await res.json();
+                // If membership found, get studentId
+                if (Array.isArray(data) && data.length > 0 && data[0].studentId) {
+                    setStudentId(data[0].studentId);
+                } else {
+                    setStudentId(null);
+                    alert(
+                        'Error: No student ID found for your account. Please ensure you have added your student number to your profile on the CS Club website and try again.'
+                    );
+                }
+            } catch {
+                setStudentId(null);
+                alert(
+                    'Error: Unable to fetch your student ID. Please ensure you have added your student number to your profile on the CS Club website and try again.'
+                );
+            }
+        };
+        fetchStudentId();
+    }, [keycloakId]);
 
     // Membership and vote status state
     const [isMember, setIsMember] = useState<boolean | null>(null);
@@ -53,10 +80,10 @@ export default function VotingPage() {
 
     // Membership check
     useEffect(() => {
-        if (!studentId) return;
+        if (!keycloakId) return;
         const checkMembership = async () => {
             try {
-                const res = await fetch(`/api/membership?keycloak_id=${studentId}`);
+                const res = await fetch(`/api/membership?keycloak_id=${keycloakId}`);
                 const data = await res.json();
                 // If membership found and not expired, allow voting
                 setIsMember(Array.isArray(data) && data.length > 0);
@@ -65,11 +92,12 @@ export default function VotingPage() {
             }
         };
         checkMembership();
-    }, [studentId]);
+    }, [keycloakId]);
 
     // Check if user has already voted for this election
     useEffect(() => {
         if (!studentId || !firstElection?.id) return;
+        if (studentId === null) return;
         const checkVoted = async () => {
             try {
                 // Query API for ballots for this user and election only
@@ -78,14 +106,15 @@ export default function VotingPage() {
                 );
                 const data = await res.json();
                 // If any ballot for this student, mark as voted
-                const voted = Array.isArray(data) && data.length > 0;
+                const voted = data.voted;
                 setHasVoted(voted);
             } catch {
                 setHasVoted(false);
             }
         };
         checkVoted();
-    }, [studentId, firstElection]);
+    }, [studentId, keycloakId, firstElection]);
+
     useEffect(() => {
         if (electionsData && electionsData.length > 0) {
             const votingElection = electionsData.find(
@@ -99,20 +128,22 @@ export default function VotingPage() {
         }
     }, [electionsData]);
 
-    // Fetch positions for the first election
+    // Fetch positions for the first election, but only if studentId is present
     const { data: positionsData } = useSWR(
-        firstElection && firstElection.id ? `/api/positions?election_id=${firstElection.id}` : null,
+        firstElection && firstElection.id && studentId
+            ? `/api/positions?election_id=${firstElection.id}`
+            : null,
         swrFetcher
     );
     useEffect(() => {
+        if (studentId === null) return;
         if (positionsData && Array.isArray(positionsData.positions)) {
             setPositions(positionsData.positions);
         }
-        // Show skeleton while waiting for positions
         if (!positionsData) {
             setCandidatesLoading(true);
         }
-    }, [positionsData]);
+    }, [positionsData, studentId]);
 
     useEffect(() => {
         setCandidatesLoading(true);
@@ -175,6 +206,7 @@ export default function VotingPage() {
 
     // Batch fetch all candidates for all positions using candidate-position-links
     useEffect(() => {
+        if (studentId === null) return; // Prevent loading if studentId is missing
         if (!firstElection?.id || positions.length === 0 || hasVoted) return;
         type CandidatePositionLink = {
             candidate: Candidate;
@@ -242,7 +274,7 @@ export default function VotingPage() {
         // Submit all ballots in a single batch request
         const batchVotes = voteData.map((vote) => ({
             student_id: studentId,
-            keycloak_id: studentId, // Ensure keycloak_id is sent for membership check
+            keycloak_id: keycloakId, // Ensure keycloak_id is sent for membership check
             election: firstElection ? firstElection.id : undefined,
             name: studentName,
             position: vote.position,
@@ -273,7 +305,22 @@ export default function VotingPage() {
 
     return (
         <div className="container mx-auto px-4 py-8">
-            {message ? (
+            {studentId === null ? (
+                <div className="flex min-h-screen items-center justify-center">
+                    <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-6 rounded text-center max-w-xl">
+                        <h2 className="text-2xl font-bold mb-2">Student ID Not Found</h2>
+                        <p className="mb-2">
+                            We could not find your student number in your CS Club profile. Voting is
+                            unavailable.
+                        </p>
+                        <p className="mb-2">
+                            Please log in to the CS Club website and add your student number to your
+                            profile, then try again.
+                        </p>
+                        <p>If you believe this is an error, please contact a committee member.</p>
+                    </div>
+                </div>
+            ) : message ? (
                 <div className="flex min-h-screen items-center justify-center">
                     <p className="text-center text-xl">{message}</p>
                 </div>
