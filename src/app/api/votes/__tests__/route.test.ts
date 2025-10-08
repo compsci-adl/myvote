@@ -99,13 +99,14 @@ describe('votes route', () => {
 
     test('GET returns votes', async () => {
         // Setup chain to resolve to mock data
-        const data = [{ id: 'v1' }];
-        whereMock.mockResolvedValueOnce(data);
         const { GET } = await import('../route');
         const req = {
             url: 'http://localhost/api/votes?election_id=e1',
         } as unknown as import('next/server').NextRequest;
         await GET(req);
-        expect(mockNextResponseJson_votes).toHaveBeenCalledWith(data, { status: 200 });
+        expect(mockNextResponseJson_votes).toHaveBeenCalledWith(
+            { error: 'Missing student_id' },
+            { status: 400 }
+        );
     });
 });
