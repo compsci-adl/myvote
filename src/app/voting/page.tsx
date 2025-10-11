@@ -381,7 +381,7 @@ export default function VotingPage() {
                         />
                     ))}
                     <Divider />
-                    <div className="mb-8 mt-8 flex justify-center">
+                    <div className="mt-8 flex justify-center">
                         <Button onPress={onOpen} className="bg-primary p-7 text-xl">
                             Edit Vote
                         </Button>
@@ -429,7 +429,7 @@ export default function VotingPage() {
                         </div>
                     ) : (
                         positions.length > 0 && (
-                            <div className="mb-8 mt-8 flex justify-center">
+                            <div className="mt-8 flex justify-center">
                                 <Button onPress={onOpen} className="bg-primary p-7 text-xl">
                                     Submit
                                 </Button>
