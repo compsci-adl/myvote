@@ -3,7 +3,7 @@ import '@/styles/globals.css';
 import { clsx } from 'clsx';
 import { Metadata, Viewport } from 'next';
 
-import { Footer } from '@/components/footer';
+import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
 import { fontSans } from '@/config/fonts';
 import { siteConfig } from '@/config/site';
