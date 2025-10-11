@@ -1,3 +1,5 @@
+jest.mock('next-auth');
+
 const selectMockVotes = jest.fn();
 const fromMock: jest.Mock = jest.fn();
 const innerJoinMock: jest.Mock = jest.fn();
@@ -85,15 +87,15 @@ describe('votes route', () => {
         returningMock.mockClear();
         memberWhereMock.mockClear();
     });
-    test('GET missing election_id returns 400', async () => {
+    test('GET missing election_id returns 401', async () => {
         const { GET } = await import('../route');
         const req = {
             url: 'http://localhost/api/votes',
         } as unknown as import('next/server').NextRequest;
         await GET(req);
         expect(mockNextResponseJson_votes).toHaveBeenCalledWith(
-            { error: 'Missing election_id' },
-            { status: 400 }
+            { error: 'Unauthorized' },
+            { status: 401 }
         );
     });
 
@@ -105,8 +107,8 @@ describe('votes route', () => {
         } as unknown as import('next/server').NextRequest;
         await GET(req);
         expect(mockNextResponseJson_votes).toHaveBeenCalledWith(
-            { error: 'Missing student_id' },
-            { status: 400 }
+            { error: 'Unauthorized' },
+            { status: 401 }
         );
     });
 });

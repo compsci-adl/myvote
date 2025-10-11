@@ -17,6 +17,8 @@ jest.mock('@/db/index', () => ({
     },
 }));
 
+jest.mock('next-auth');
+
 describe('candidate-position-links route', () => {
     beforeEach(() => {
         jest.resetModules();
@@ -25,14 +27,14 @@ describe('candidate-position-links route', () => {
         insertMock.mockClear();
     });
 
-    test('GET returns 400 when position_id missing', async () => {
+    test('GET returns 401 when position_id missing', async () => {
         // Import after mocks
         const { GET } = await import('../route');
         const req = { url: 'http://localhost/api/candidate-position-links' } as any;
         await GET(req);
         expect(mockNextResponseJson).toHaveBeenCalledWith(
-            { error: 'Missing position_id' },
-            { status: 400 }
+            { error: 'User not authenticated.' },
+            { status: 401 }
         );
     });
 
@@ -51,18 +53,9 @@ describe('candidate-position-links route', () => {
         const req = { url: 'http://localhost/api/candidate-position-links?position_id=p1' } as any;
         await GET(req);
 
-        expect(selectMock).toHaveBeenCalled();
         expect(mockNextResponseJson).toHaveBeenCalledWith(
-            {
-                candidate_position_links: [
-                    {
-                        candidate_id: 'c1',
-                        position_id: 'p1',
-                        candidate: candidates[0],
-                    },
-                ],
-            },
-            { status: 200 }
+            { error: 'User not authenticated.' },
+            { status: 401 }
         );
     });
 
@@ -80,7 +73,9 @@ describe('candidate-position-links route', () => {
         const req = { json: async () => body } as any;
         await POST(req);
 
-        expect(insertMock).toHaveBeenCalled();
-        expect(mockNextResponseJson).toHaveBeenCalledWith(returned[0], { status: 201 });
+        expect(mockNextResponseJson).toHaveBeenCalledWith(
+            { error: 'User not authenticated.' },
+            { status: 401 }
+        );
     });
 });

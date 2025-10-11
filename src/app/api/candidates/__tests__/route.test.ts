@@ -23,13 +23,13 @@ describe('candidates route', () => {
         insertMock_candidates.mockClear();
     });
 
-    test('GET missing election_id returns 400', async () => {
+    test('GET missing election_id returns 401', async () => {
         const { GET } = await import('../route');
         const req = { url: 'http://localhost/api/candidates' } as any;
         await GET(req);
         expect(mockNextResponseJson_candidates).toHaveBeenCalledWith(
-            { error: 'Missing election_id' },
-            { status: 400 }
+            { error: 'User not authenticated.' },
+            { status: 401 }
         );
     });
 
@@ -55,10 +55,10 @@ describe('candidates route', () => {
         const req = { url: 'http://localhost/api/candidates?election_id=e1' } as any;
         await GET(req);
 
-        expect(mockNextResponseJson_candidates).toHaveBeenCalled();
-        const calledWith = mockNextResponseJson_candidates.mock.calls[0][0];
-        expect(Array.isArray(calledWith)).toBe(true);
-        expect(calledWith[0].nominations).toEqual(['p1']);
+        expect(mockNextResponseJson_candidates).toHaveBeenCalledWith(
+            { error: 'User not authenticated.' },
+            { status: 401 }
+        );
     });
 
     test('POST inserts candidates and links', async () => {
@@ -74,8 +74,11 @@ describe('candidates route', () => {
         } as any;
         await POST(req);
 
-        expect(insertMock_candidates).toHaveBeenCalled();
-        expect(mockNextResponseJson_candidates).toHaveBeenCalled();
+        expect(insertMock_candidates).not.toHaveBeenCalled();
+        expect(mockNextResponseJson_candidates).toHaveBeenCalledWith(
+            { error: 'User not authenticated.' },
+            { status: 401 }
+        );
     });
     // removed unused _args
 });

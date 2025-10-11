@@ -93,10 +93,13 @@ const config: Config = {
 
   // A map from regular expressions to module names or to arrays of module names that allow to stub out resources with a single module
   moduleNameMapper: {
-    // support the `@/` path alias used in tsconfig.json -> src/*
-    '^@/(.*)$': '<rootDir>/src/$1',
-    // map the ESM-only `ky` package to a local CommonJS mock for Jest
-    '^ky$': '<rootDir>/jest/__mocks__/ky.js',
+  // support the `@/` path alias used in tsconfig.json -> src/*
+  '^@/(.*)$': '<rootDir>/src/$1',
+  // map the ESM-only `ky` package to a local CommonJS mock for Jest
+  '^ky$': '<rootDir>/jest/__mocks__/ky.js',
+  // mock next-auth and next-auth/providers/keycloak for Jest
+  '^next-auth$': '<rootDir>/jest/__mocks__/next-auth.js',
+  '^next-auth/providers/keycloak$': '<rootDir>/jest/__mocks__/next-auth/providers/keycloak.js',
   },
 
   // File extensions Jest will look for
@@ -199,11 +202,10 @@ const config: Config = {
   // A map from regular expressions to paths to transformers
   // transform: undefined,
 
-  // An array of regexp pattern strings that are matched against all source file paths, matched files will skip transformation
-  // transformIgnorePatterns: [
-  //   "/node_modules/",
-  //   "\\.pnp\\.[^\\/]+$"
-  // ],
+  // Transform ESM-only modules in node_modules (next-auth, @auth/core, ky, @babel/runtime)
+  transformIgnorePatterns: [
+    '/node_modules/(?!next-auth|@auth/core|@babel/runtime|ky).+\\.js$',
+  ],
 
   // An array of regexp pattern strings that are matched against all modules before the module loader will automatically return a mock for them
   // unmockedModulePathPatterns: undefined,
