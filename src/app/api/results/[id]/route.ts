@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
+import { auth } from '@/auth';
 import { db } from '@/db/index';
 import { ballots, candidatePositionLinks, candidates, positions } from '@/db/schema';
 import { hareclarkWithTallies } from '@/utils/hareclark';
@@ -20,6 +21,21 @@ interface ResultPosition {
 
 export async function GET(req: NextRequest) {
     // Expect /api/results/[id] where id is the election_id
+
+    const session = await auth();
+    if (!session?.user || !session.accessToken) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    let isAdmin = false;
+    try {
+        const decodedToken = JSON.parse(atob(session.accessToken.split('.')[1]));
+        isAdmin = decodedToken?.realm_access?.roles?.includes('myvote-admin');
+    } catch {
+        isAdmin = false;
+    }
+    if (!isAdmin) {
+        return NextResponse.json({ error: 'Admin privileges required.' }, { status: 403 });
+    }
     const { pathname } = new URL(req.url);
     // pathname: /api/results/[id]
     const match = pathname.match(/\/api\/results\/(.+)$/);

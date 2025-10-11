@@ -248,7 +248,7 @@ export default function VotingPage() {
             }
         };
         fetchAllCandidatesAndLinks();
-    }, [firstElection, positions, hasVoted]);
+    }, [firstElection, positions, hasVoted, studentId]);
 
     // Handle form submit
     const handleSubmit = async () => {
@@ -304,7 +304,11 @@ export default function VotingPage() {
 
     const isLoadingStudentId = typeof studentId === 'undefined';
     const isLoadingAll =
-        isLoadingStudentId || (studentId !== null && positions.length === 0 && candidatesLoading);
+        isLoadingStudentId ||
+        (studentId !== null &&
+            positions.length === 0 &&
+            candidatesLoading &&
+            firstElection !== null);
 
     return (
         <div className="container mx-auto px-4 py-8">

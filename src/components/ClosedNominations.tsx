@@ -36,6 +36,25 @@ export default function ClosedNominations({ electionId, setSliderValue }: Closed
             return;
         }
 
+        // Simple sanitisation function to escape HTML special characters
+        function sanitise(str: string) {
+            // Remove surrounding quotes if present
+            let clean = str;
+            if (clean.startsWith('"') && clean.endsWith('"')) {
+                clean = clean.slice(1, -1);
+            }
+            // Escape HTML special characters
+            const map: Record<string, string> = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                "'": '&#39;',
+                '"': '&quot;',
+                '`': '&#96;',
+            };
+            return clean.replace(/[&<>'"`]/g, (c) => map[c] ?? c);
+        }
+
         Papa.parse(file, {
             header: true,
             complete: (results: { data: unknown[] }) => {
@@ -48,9 +67,9 @@ export default function ClosedNominations({ electionId, setSliderValue }: Closed
                         'Roles' in row
                     ) {
                         return {
-                            name: (row as { Name: string }).Name,
-                            statement: (row as { Statement: string }).Statement,
-                            roles: (row as { Roles: string }).Roles,
+                            name: sanitise((row as { Name: string }).Name),
+                            statement: sanitise((row as { Statement: string }).Statement),
+                            roles: sanitise((row as { Roles: string }).Roles),
                         };
                     }
                     return { name: '', statement: '', roles: '' };
