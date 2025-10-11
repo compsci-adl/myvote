@@ -111,21 +111,25 @@ const CandidateCard = memo(({ i, c, candidates, setCandidates }: CandidateCardPr
                     className={clsx(
                         isDraggedOver && 'translate-x-3',
                         isDraggedOver && 'rotate-1',
-                        'm-3 bg-primary-100 p-3',
+                        'm-3 bg-primary-100 p-3 select-none',
                         isDragging && 'opacity-50'
                     )}
+                    style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
                 >
                     {i === 0 ? (
-                        <p>🥇</p>
+                        <p style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>🥇</p>
                     ) : i === 1 ? (
-                        <p>🥈</p>
+                        <p style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>🥈</p>
                     ) : i === 2 ? (
-                        <p>🥉</p>
+                        <p style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>🥉</p>
                     ) : (
-                        <p>{i + 1}</p>
+                        <p style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>{i + 1}</p>
                     )}
-                    <CardBody className="text-center">
-                        <h6>{c.name}</h6>
+                    <CardBody
+                        className="text-center"
+                        style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
+                    >
+                        <h6 style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>{c.name}</h6>
                     </CardBody>
                 </Card>
             </div>
