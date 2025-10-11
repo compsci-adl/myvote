@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db } from '@/db/index';
 import { memberDb, memberTable } from '@/db/member';
-import { ballots, voters } from '@/db/schema';
+import { ballots, elections, voters } from '@/db/schema';
 
 export async function GET(req: NextRequest) {
     // Expect /api/votes?election_id=123&student_id=abc
@@ -73,6 +73,15 @@ export async function POST(req: NextRequest) {
         !/^[a-zA-Z0-9_-]+$/.test(election_id)
     ) {
         return NextResponse.json({ error: 'Invalid or missing election_id' }, { status: 400 });
+    }
+    // Fetch election info for status check
+    const electionData = await db.select().from(elections).where(eq(elections.id, election_id));
+    const election = Array.isArray(electionData) ? electionData[0] : electionData;
+    if (!election) {
+        return NextResponse.json({ error: 'Election not found' }, { status: 404 });
+    }
+    if (election.status !== 'Voting') {
+        return NextResponse.json({ error: 'Voting is closed.' }, { status: 403 });
     }
     let body;
     try {
@@ -144,7 +153,9 @@ export async function POST(req: NextRequest) {
         if (!voter) {
             return NextResponse.json({ error: 'Failed to create or find voter' }, { status: 500 });
         }
-        // Batch insert votes in groups of 20
+        // Delete previous ballots for this voter (if any)
+        await db.delete(ballots).where(eq(ballots.voter_id, voter.id));
+        // Insert new ballots
         const batchSize = 20;
         const insertedVotes = [];
         for (let i = 0; i < votesArray.length; i += batchSize) {
@@ -158,19 +169,6 @@ export async function POST(req: NextRequest) {
                     !Array.isArray(voteData.preferences)
                 ) {
                     insertedVotes.push({ error: 'Invalid vote data', vote: voteData });
-                    continue;
-                }
-                // Check if already voted for this position
-                const existingBallot = await db
-                    .select()
-                    .from(ballots)
-                    .where(eq(ballots.voter_id, voter.id))
-                    .then((rows) => rows.find((b) => b.position === voteData.position));
-                if (existingBallot) {
-                    insertedVotes.push({
-                        error: 'Already voted for this position',
-                        position: voteData.position,
-                    });
                     continue;
                 }
                 const ballotId = crypto.randomUUID();

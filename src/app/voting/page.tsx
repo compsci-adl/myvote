@@ -149,6 +149,13 @@ export default function VotingPage() {
         setCandidatesLoading(true);
     }, []);
 
+    // Determine if user can edit vote (while status is Voting)
+    const canEditVote =
+        hasVoted &&
+        firstElection &&
+        ((typeof firstElection.status === 'string' &&
+            String(firstElection.status).toLowerCase() === 'voting') ||
+            firstElection.status === 3);
     useEffect(() => {
         if (electionsLoading) return;
         if (!firstElection) {
@@ -159,12 +166,12 @@ export default function VotingPage() {
             setMessage('Voting has closed.');
         } else if (isMember === false) {
             setMessage('You must be a paid CS club member to vote.');
-        } else if (hasVoted) {
+        } else if (hasVoted && !canEditVote) {
             setMessage('You have already voted.');
         } else {
             setMessage('');
         }
-    }, [firstElection, electionsLoading, isMember, hasVoted]);
+    }, [firstElection, electionsLoading, isMember, hasVoted, canEditVote]);
 
     // Handle submit vote
     const submitVote = useSWRMutation(
@@ -256,7 +263,7 @@ export default function VotingPage() {
             alert('Error: No student ID or name found. Please log in again.');
             return;
         }
-        if (hasVoted) {
+        if (hasVoted && !canEditVote) {
             setStatusMessage('You have already voted.');
             return;
         }
@@ -354,10 +361,53 @@ export default function VotingPage() {
                 <div className="flex min-h-screen items-center justify-center">
                     <p className="text-center text-xl">Election closed.</p>
                 </div>
-            ) : hasVoted ? (
+            ) : hasVoted && !canEditVote ? (
                 <div className="flex min-h-screen items-center justify-center">
                     <p className="text-center text-xl">You have already voted.</p>
                 </div>
+            ) : hasVoted && canEditVote ? (
+                <>
+                    <h1 className="mb-8 text-center text-3xl font-bold">Edit Your Vote</h1>
+                    <div className="mb-4 text-center text-lg">
+                        You have already voted, but you can change your vote while voting is open.
+                    </div>
+                    {positions.map((position) => (
+                        <PositionSection
+                            key={position.id}
+                            position={position}
+                            candidates={candidates}
+                            setCandidates={setCandidates}
+                            loading={candidatesLoading}
+                        />
+                    ))}
+                    <Divider />
+                    <div className="mb-8 mt-8 flex justify-center">
+                        <Button onPress={onOpen} className="bg-primary p-7 text-xl">
+                            Edit Vote
+                        </Button>
+                    </div>
+                    <Modal size="md" isOpen={isOpen} onClose={onClose}>
+                        <ModalContent>
+                            <ModalHeader>Confirm Vote Change</ModalHeader>
+                            <ModalBody>
+                                <p>
+                                    Are you sure you want to change your vote? This will overwrite
+                                    your previous choices. You can continue to edit your vote while
+                                    voting is open.
+                                </p>
+                            </ModalBody>
+                            <Divider />
+                            <ModalFooter className="justify-center">
+                                <Button onPress={handleSubmit}>Confirm Change</Button>
+                            </ModalFooter>
+                        </ModalContent>
+                    </Modal>
+                    {statusMessage && (
+                        <div className="status-message text-center mt-4">
+                            <p>{statusMessage}</p>
+                        </div>
+                    )}
+                </>
             ) : (
                 <>
                     <h1 className="mb-8 text-center text-3xl font-bold">Voting</h1>
@@ -391,8 +441,8 @@ export default function VotingPage() {
                             <ModalHeader>Are You Sure You Want to Submit?</ModalHeader>
                             <ModalBody>
                                 <p>
-                                    Are you sure you want to submit? You can only submit once, and
-                                    you will not be able to edit or undo your votes.
+                                    Are you sure you want to submit? You can change your vote while
+                                    voting is open, but once voting closes, your choices are final.
                                 </p>
                             </ModalBody>
                             <Divider />
