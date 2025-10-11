@@ -9,27 +9,19 @@ import {
     FaGithub,
     FaInstagram,
     FaLinkedin,
+    FaTiktok,
+    FaYoutube,
 } from 'react-icons/fa';
 
 const LINKS = [
-    { icon: FaEnvelope, link: 'mailto:dev@csclub.org.au', label: 'Email' },
-    { icon: FaGithub, link: 'https://github.com/compsci-adl/', label: 'GitHub' },
-    {
-        icon: FaInstagram,
-        link: 'https://www.instagram.com/csclub.adl/',
-        label: 'Instagram',
-    },
-    {
-        icon: FaFacebook,
-        link: 'https://www.facebook.com/compsci.adl/',
-        label: 'Facebook',
-    },
-    { icon: FaDiscord, link: 'https://discord.gg/UjvVxHA', label: 'Discord' },
-    {
-        icon: FaLinkedin,
-        link: 'https://www.linkedin.com/company/compsci-adl/',
-        label: 'LinkedIn',
-    },
+    { icon: FaEnvelope, link: 'mailto:dev@csclub.org.au' },
+    { icon: FaGithub, link: 'https://github.com/compsci-adl' },
+    { icon: FaInstagram, link: 'https://www.instagram.com/csclub.adl/' },
+    { icon: FaTiktok, link: 'https://www.tiktok.com/@csclub.adl/' },
+    { icon: FaFacebook, link: 'https://www.facebook.com/compsci.adl/' },
+    { icon: FaDiscord, link: 'https://discord.gg/UjvVxHA' },
+    { icon: FaLinkedin, link: 'https://www.linkedin.com/company/compsci-adl/' },
+    { icon: FaYoutube, link: 'https://www.youtube.com/@csclub-adl/' },
 ];
 
 const FOOTER_SECTIONS = [
