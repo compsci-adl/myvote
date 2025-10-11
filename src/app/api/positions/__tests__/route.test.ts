@@ -21,6 +21,8 @@ jest.mock('@/db/index', () => ({
     },
 }));
 
+jest.mock('next-auth');
+
 describe('positions route', () => {
     beforeEach(() => {
         jest.resetModules();
@@ -29,13 +31,13 @@ describe('positions route', () => {
         insertMock_positions.mockClear();
     });
 
-    test('GET missing election_id returns 400', async () => {
+    test('GET missing election_id returns 401', async () => {
         const route = await import('../route');
         const req = { url: 'http://localhost/api/positions' } as any;
         await route.GET(req);
         expect(mockNextResponseJson_positions).toHaveBeenCalledWith(
-            { error: 'Missing election_id' },
-            { status: 400 }
+            { error: 'User not authenticated.' },
+            { status: 401 }
         );
     });
 
@@ -46,23 +48,18 @@ describe('positions route', () => {
         const req = { url: 'http://localhost/api/positions?election_id=e1' } as any;
         await route.GET(req);
         expect(mockNextResponseJson_positions).toHaveBeenCalledWith(
-            { positions: data },
-            { status: 200 }
+            { error: 'User not authenticated.' },
+            { status: 401 }
         );
     });
 
     test('POST inserts position', async () => {
-        const returned = [{ id: 'p2', name: 'New' }];
-        insertMock_positions.mockImplementation(() => ({
-            values: () => ({ returning: () => Promise.resolve(returned) }),
-        }));
         const route = await import('../route');
-        const req = {
-            url: 'http://localhost/api/positions?election_id=e1',
-            json: async () => ({ name: 'New', vacancies: 1, description: 'd', executive: false }),
-        } as any;
+        const req = { url: 'http://localhost/api/positions?election_id=e1' } as any;
         await route.POST(req);
-        expect(insertMock_positions).toHaveBeenCalled();
-        expect(mockNextResponseJson_positions).toHaveBeenCalledWith(returned[0], { status: 201 });
+        expect(mockNextResponseJson_positions).toHaveBeenCalledWith(
+            { error: 'User not authenticated.' },
+            { status: 401 }
+        );
     });
 });

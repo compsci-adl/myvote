@@ -1,5 +1,22 @@
+import { eq } from 'drizzle-orm';
+import { NextRequest, NextResponse } from 'next/server';
+
+import { auth } from '@/auth';
+import { db } from '@/db/index';
+import { elections, ElectionStatus } from '@/db/schema';
+import { isAdmin } from '@/utils/is-admin';
+import { isMember } from '@/utils/is-member';
+
 export async function PATCH(req: NextRequest) {
     // PATCH /api/elections/[id] - update election by id
+    const session = await auth();
+    if (!session?.user) {
+        return NextResponse.json({ error: 'User not authenticated.' }, { status: 401 });
+    }
+    if (!isAdmin(session)) {
+        return NextResponse.json({ error: 'Admin privileges required.' }, { status: 403 });
+    }
+
     const urlParts = req.url.split('/');
     const id = urlParts[urlParts.length - 1];
     if (!id) {
@@ -54,13 +71,17 @@ export async function PATCH(req: NextRequest) {
     }
     return NextResponse.json(election, { status: 200 });
 }
-import { eq } from 'drizzle-orm';
-import { NextRequest, NextResponse } from 'next/server';
-
-import { db } from '@/db/index';
-import { elections, ElectionStatus } from '@/db/schema';
 
 export async function GET(req: NextRequest) {
+    // Require authentication
+    const session = await auth();
+    if (!session?.user?.id) {
+        return NextResponse.json({ error: 'User information missing.' }, { status: 400 });
+    }
+    const member = await isMember(session.user.id);
+    if (!member) {
+        return NextResponse.json({ error: 'Paid CS Club membership required.' }, { status: 403 });
+    }
     // GET /api/elections/[id] - fetch election by id
     const urlParts = req.url.split('/');
     const id = urlParts[urlParts.length - 1];

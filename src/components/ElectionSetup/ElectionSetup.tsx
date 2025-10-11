@@ -4,8 +4,9 @@ import { Button } from '@heroui/react';
 import { useState } from 'react';
 import useSWRMutation from 'swr/mutation';
 
+import { ElectionStatus } from '@/db/schema';
+
 import { fetcher } from '../../lib/fetcher';
-import type { ElectionStatus } from '../../types/election-status';
 import ElectionInfo from './ElectionInfo';
 import Positions from './Positions';
 import { electionSchema } from './schemas';

@@ -84,7 +84,6 @@ export function hareclarkWithTallies(
         }
         if (winner === null || loser === null) break;
         if ((votes.get(winner) || 0) === (votes.get(loser) || 0)) {
-            console.warn('Warning! There is a tie!');
             break;
         }
         if ((votes.get(winner) || 0) > quota) {

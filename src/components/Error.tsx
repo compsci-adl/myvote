@@ -3,17 +3,20 @@
 import { Code } from '@heroui/react';
 import { useEffect } from 'react';
 
-interface ErrorProps {
-    error: Error & { digest?: string };
-    reset: () => void;
-}
-
-export const Error = ({ error }: ErrorProps) => {
-    const errorMessage = String(error);
+export const Error = () => {
+    const errorMessage =
+        'An unexpected error occurred. Please try again or contact a committee member.';
 
     useEffect(() => {
         // Clear local data to reset the app
-        localStorage.clear();
+        if (window && window.localStorage) {
+            // Clear only app-specific keys
+            Object.keys(localStorage).forEach((key) => {
+                if (key.startsWith('myvote_')) {
+                    localStorage.removeItem(key);
+                }
+            });
+        }
     }, []);
 
     return (

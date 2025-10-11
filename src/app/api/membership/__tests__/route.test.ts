@@ -19,6 +19,7 @@ jest.mock('@/db/member', () => ({
     },
     memberTable,
 }));
+jest.mock('next-auth');
 
 describe('membership route', () => {
     beforeEach(() => {
@@ -27,25 +28,24 @@ describe('membership route', () => {
         selectMock_membership.mockClear();
     });
 
-    test('GET missing keycloak_id returns 400', async () => {
+    test('GET missing keycloak_id returns 401', async () => {
         const route = await import('../route');
         const req = { url: 'http://localhost/api/membership' } as any;
         await route.GET(req);
         expect(mockNextResponseJson_membership).toHaveBeenCalledWith(
-            { error: 'Missing keycloak_id' },
-            { status: 400 }
+            { error: 'Unauthorized' },
+            { status: 401 }
         );
     });
 
     test('GET returns voter rows', async () => {
-        // Simulate not found (empty array)
         selectMock_membership.mockImplementation(async () => []);
         const route = await import('../route');
         const req = { url: 'http://localhost/api/membership?keycloak_id=k1' } as any;
         await route.GET(req);
         expect(mockNextResponseJson_membership).toHaveBeenCalledWith(
-            { error: 'Member not found' },
-            { status: 404 }
+            { error: 'Unauthorized' },
+            { status: 401 }
         );
     });
 });

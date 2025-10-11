@@ -1,11 +1,18 @@
 import { eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
+import { auth } from '@/auth';
 import { db } from '@/db/index';
 import { positions } from '@/db/schema';
 
 export async function GET(req: NextRequest) {
     // /api/positions/[id] - get positions by election id
+
+    const session = await auth();
+    if (!session?.user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     // Extract election id from URL
     const urlParts = req.url.split('/');
     const election_id = urlParts[urlParts.length - 1];

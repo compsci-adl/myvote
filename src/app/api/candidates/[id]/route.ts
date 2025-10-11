@@ -1,10 +1,14 @@
-// import { eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
+import { auth } from '@/auth';
 import { db } from '@/db/index';
 import { candidates } from '@/db/schema';
 
 export async function POST(req: NextRequest) {
+    const session = await auth();
+    if (!session?.user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     // POST /api/candidates/[election_id] - add candidates for election
     const urlParts = req.url.split('/');
     const election_id = urlParts[urlParts.length - 1];

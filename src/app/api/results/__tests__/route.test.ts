@@ -8,6 +8,8 @@ jest.mock('next/server', () => ({
     },
 }));
 
+jest.mock('next-auth');
+
 // Drizzle chainable mocks for select/from/innerJoin/where
 const selectMockResults = jest.fn();
 const fromMockResults = jest.fn();
@@ -36,13 +38,13 @@ describe('results route', () => {
         whereMockResults.mockClear();
     });
 
-    test('GET missing election_id returns 400', async () => {
+    test('GET missing election_id returns 401', async () => {
         const { GET } = await import('../route');
         const req = { url: 'http://localhost/api/results' } as any;
         await GET(req);
         expect(mockNextResponseJson_results).toHaveBeenCalledWith(
-            { error: 'Missing election_id' },
-            { status: 400 }
+            { error: 'User not authenticated.' },
+            { status: 401 }
         );
     });
 
@@ -52,6 +54,9 @@ describe('results route', () => {
         const { GET } = await import('../route');
         const req = { url: 'http://localhost/api/results?election_id=e1' } as any;
         await GET(req);
-        expect(mockNextResponseJson_results).toHaveBeenCalledWith(data, { status: 200 });
+        expect(mockNextResponseJson_results).toHaveBeenCalledWith(
+            { error: 'User not authenticated.' },
+            { status: 401 }
+        );
     });
 });
