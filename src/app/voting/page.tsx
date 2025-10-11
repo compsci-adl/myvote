@@ -382,7 +382,10 @@ export default function VotingPage() {
                     ))}
                     <Divider />
                     <div className="mt-8 flex justify-center">
-                        <Button onPress={onOpen} className="bg-primary p-7 text-xl">
+                        <Button
+                            onPress={onOpen}
+                            className="bg-primary px-8 py-6 text-lg font-semibold"
+                        >
                             Edit Vote
                         </Button>
                     </div>
