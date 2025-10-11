@@ -15,8 +15,7 @@ import { signIn, signOut, useSession } from 'next-auth/react';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 
-// TODO: Import fetcher when migrated
-// import { fetcher } from '../lib/fetcher';
+import { env } from '../env.mjs';
 
 const HEADER_BUTTON_PROPS = {
     size: 'sm',
@@ -106,6 +105,19 @@ export const Header = () => {
                     )}
 
                     <NavbarItem>
+                        <Tooltip content="Send Feedback" size="sm">
+                            <Button
+                                {...HEADER_BUTTON_PROPS}
+                                as="a"
+                                href={env.NEXT_PUBLIC_FEEDBACK_FORM_URL}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                🗣️
+                            </Button>
+                        </Tooltip>
+                    </NavbarItem>
+                    <NavbarItem>
                         <Tooltip content="Toggle Dark Mode" size="sm">
                             <Button {...HEADER_BUTTON_PROPS} onPress={toggleTheme}>
                                 {mounted ? (theme === 'dark' ? '🌚' : '🌞') : '🌞'}
@@ -151,7 +163,7 @@ export const Header = () => {
 const LoggedInAuthButton = () => {
     return (
         <div className="flex items-center gap-2">
-            <Button color="primary" size="md" onPress={() => signOut({ callbackUrl: '/' })}>
+            <Button color="primary" size="sm" onPress={() => signOut({ callbackUrl: '/' })}>
                 Logout
             </Button>
         </div>
@@ -160,7 +172,7 @@ const LoggedInAuthButton = () => {
 
 const NotLoggedInAuthButton = () => {
     return (
-        <Button color="primary" size="md" onPress={() => signIn('keycloak')}>
+        <Button color="primary" size="sm" onPress={() => signIn('keycloak')}>
             Login
         </Button>
     );

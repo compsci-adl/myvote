@@ -5,6 +5,13 @@ jobs:
   test:
     timeout-minutes: 60
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: "file:dev.sqlite"
+      KEYCLOAK_ISSUER: "http://localhost:8080/realms/cs-club"
+      KEYCLOAK_CLIENT_ID: "myvote"
+      KEYCLOAK_CLIENT_SECRET: "secret"
+      NEXTAUTH_URL: "http://localhost:3000"
+      AUTH_SECRET: "secret"
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -13,8 +20,6 @@ jobs:
       - name: Install dependencies
         run: npm install -g pnpm && pnpm install
 
-      - name: Set up Auth.js secret
-        run: echo "AUTH_SECRET=$(openssl rand -base64 32)" >> $GITHUB_ENV
       - name: Install Playwright Browsers
         run: pnpm exec playwright install --with-deps
       - name: Run Playwright tests
