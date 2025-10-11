@@ -163,7 +163,7 @@ export const Header = () => {
 const LoggedInAuthButton = () => {
     return (
         <div className="flex items-center gap-2">
-            <Button color="primary" size="md" onPress={() => signOut({ callbackUrl: '/' })}>
+            <Button color="primary" size="sm" onPress={() => signOut({ callbackUrl: '/' })}>
                 Logout
             </Button>
         </div>
@@ -172,7 +172,7 @@ const LoggedInAuthButton = () => {
 
 const NotLoggedInAuthButton = () => {
     return (
-        <Button color="primary" size="md" onPress={() => signIn('keycloak')}>
+        <Button color="primary" size="sm" onPress={() => signIn('keycloak')}>
             Login
         </Button>
     );
