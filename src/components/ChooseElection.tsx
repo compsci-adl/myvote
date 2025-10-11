@@ -4,13 +4,8 @@ import { Button } from '@heroui/react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
-import { ElectionStatus } from '../types/election-status';
-
-interface Election {
-    id: number;
-    name: string;
-    status: ElectionStatus;
-}
+import { ElectionStatus } from '@/db/schema';
+import type { Election } from '@/types/election';
 
 interface ChooseElectionProps {
     setSliderValue: React.Dispatch<React.SetStateAction<number>>;
@@ -62,17 +57,17 @@ export default function ChooseElection({
             return 'Unknown';
         }
         switch (status) {
-            case ElectionStatus.PreRelease:
+            case 'PreRelease':
                 return 'PreRelease';
-            case ElectionStatus.Nominations:
+            case 'Nominations':
                 return 'Nominations';
-            case ElectionStatus.NominationsClosed:
+            case 'NominationsClosed':
                 return 'NominationsClosed';
-            case ElectionStatus.Voting:
+            case 'Voting':
                 return 'Voting';
-            case ElectionStatus.VotingClosed:
+            case 'VotingClosed':
                 return 'VotingClosed';
-            case ElectionStatus.ResultsReleased:
+            case 'ResultsReleased':
                 return 'ResultsReleased';
             default:
                 return 'Unknown';

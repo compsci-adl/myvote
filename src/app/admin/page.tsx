@@ -22,7 +22,8 @@ import OpenNominations from '@/components/OpenNominations';
 import OpenVoting from '@/components/OpenVoting';
 import Results from '@/components/Results';
 import { setRefs } from '@/constants/refs';
-import type { ElectionStatus } from '@/types/election-status';
+import type { ElectionStatus } from '@/db/schema';
+import type { Election } from '@/types/election';
 
 export default function AdminPage() {
     const { data: session } = useSession();
@@ -34,11 +35,7 @@ export default function AdminPage() {
     const [actionToConfirm, setActionToConfirm] = useState<() => void>(() => {});
     const { isOpen, onOpen, onOpenChange } = useDisclosure();
 
-    const [selectedElection, setSelectedElection] = useState<{
-        id: number;
-        name: string;
-        status: ElectionStatus;
-    } | null>(null);
+    const [selectedElection, setSelectedElection] = useState<Election | null>(null);
 
     const pathname = usePathname();
 
@@ -51,7 +48,11 @@ export default function AdminPage() {
                 .then((res) => (res.ok ? res.json() : null))
                 .then((data) => {
                     if (data) {
-                        setSelectedElection(data);
+                        setSelectedElection({
+                            id: Number(data.id),
+                            name: data.name,
+                            status: data.status as ElectionStatus,
+                        });
                         // Set slider based on status
                         switch (data.status) {
                             case 'PreRelease':
