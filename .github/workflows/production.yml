@@ -42,6 +42,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-buildx-
 
+      - name: Echo environment variables to .env.local
+        run: |
+          echo "NEXT_PUBLIC_UMAMI_WEBSITE_ID=${{ secrets.NEXT_PUBLIC_UMAMI_WEBSITE_ID }}" >> .env.local
+          echo "NEXT_PUBLIC_FEEDBACK_FORM_URL=${{ secrets.NEXT_PUBLIC_FEEDBACK_FORM_URL }}" >> .env.local
+
       - name: Build Docker container
         env:
           PRODUCTION_BUILD: 'true'
