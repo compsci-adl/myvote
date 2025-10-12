@@ -2,11 +2,13 @@ import '@/styles/globals.css';
 
 import { clsx } from 'clsx';
 import { Metadata, Viewport } from 'next';
+import Script from 'next/script';
 
 import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
 import { fontSans } from '@/config/fonts';
 import { siteConfig } from '@/config/site';
+import { env } from '@/env.mjs';
 
 import { Providers } from './providers';
 
@@ -31,13 +33,11 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
     return (
         <html suppressHydrationWarning lang="en">
-            <head>
-                <script
-                    defer
-                    src="https://umami.csclub.org.au/script.js"
-                    data-website-id="7098cb21-4bb6-45bd-a5b2-579f88c612da"
-                ></script>
-            </head>
+            <Script
+                defer
+                src="https://umami.csclub.org.au/script.js"
+                data-website-id={env.NEXT_PUBLIC_UMAMI_WEBSITE_ID}
+            />
             <body
                 className={clsx(
                     'text-foreground bg-background min-h-screen font-sans antialiased',
