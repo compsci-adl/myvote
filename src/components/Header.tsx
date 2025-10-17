@@ -127,7 +127,11 @@ export const Header = () => {
                     </NavbarItem>
                     <NavbarItem>
                         <Tooltip content="Toggle Dark Mode" size="sm">
-                            <Button {...HEADER_BUTTON_PROPS} onPress={toggleTheme}>
+                            <Button
+                                {...HEADER_BUTTON_PROPS}
+                                onPress={toggleTheme}
+                                data-testid="theme-toggle"
+                            >
                                 {mounted ? (theme === 'dark' ? '🌚' : '🌞') : '🌞'}
                             </Button>
                         </Tooltip>
