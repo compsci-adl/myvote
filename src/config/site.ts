@@ -17,6 +17,10 @@ export const siteConfig = {
             href: '/candidates',
         },
         {
+            label: 'Positions',
+            href: '/positions',
+        },
+        {
             label: 'Admin',
             href: '/admin',
         },
@@ -29,6 +33,10 @@ export const siteConfig = {
         {
             label: 'Candidates',
             href: '/candidates',
+        },
+        {
+            label: 'Positions',
+            href: '/positions',
         },
         {
             label: 'Admin',

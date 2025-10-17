@@ -144,6 +144,12 @@ export const Header = () => {
                             >
                                 Candidates
                             </Button>
+                            <Button
+                                className={clsx({ 'bg-primary': isActive('/positions') })}
+                                onPress={() => router.push('/positions')}
+                            >
+                                Positions
+                            </Button>
                             {isAdmin() && (
                                 <Button
                                     className={clsx({ 'bg-primary': isActive('/admin') })}

@@ -173,7 +173,7 @@ export default function CandidatesPage() {
                                                             key={pos.id}
                                                             className={
                                                                 'executive' in pos && pos.executive
-                                                                    ? 'text-orange-700 font-semibold'
+                                                                    ? 'text-orange-700'
                                                                     : ''
                                                             }
                                                         >
