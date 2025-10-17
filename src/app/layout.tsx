@@ -10,6 +10,8 @@ import { fontSans } from '@/config/fonts';
 import { siteConfig } from '@/config/site';
 import { env } from '@/env.mjs';
 
+import { FirstTimeHelpClient } from '../components/FirstTimeHelpClient';
+import { HelpModal } from '../components/HelpModal';
 import { Providers } from './providers';
 
 export const metadata: Metadata = {
@@ -47,6 +49,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <Providers themeProps={{ attribute: 'class', defaultTheme: 'light' }}>
                     <Header />
                     <main className="mx-auto max-w-screen-xl space-y-4 px-2 py-4">
+                        <FirstTimeHelpClient />
+                        <HelpModal />
                         {children}
                         <Footer />
                     </main>

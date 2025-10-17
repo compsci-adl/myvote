@@ -16,6 +16,7 @@ import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 
 import { env } from '../env.mjs';
+import { useHelpModal } from '../helpers/help-modal';
 
 const HEADER_BUTTON_PROPS = {
     size: 'sm',
@@ -32,6 +33,7 @@ export const Header = () => {
     const [mounted, setMounted] = useState(false);
     const router = useRouter();
     const pathname = usePathname();
+    const openHelpModal = useHelpModal((s) => s.open);
 
     // Handle hydration
     useEffect(() => {
@@ -103,7 +105,13 @@ export const Header = () => {
                     ) : (
                         <NotLoggedInAuthButton />
                     )}
-
+                    <NavbarItem>
+                        <Tooltip content="Help" size="sm">
+                            <Button {...HEADER_BUTTON_PROPS} onPress={openHelpModal}>
+                                ❓
+                            </Button>
+                        </Tooltip>
+                    </NavbarItem>
                     <NavbarItem>
                         <Tooltip content="Send Feedback" size="sm">
                             <Button
@@ -119,7 +127,11 @@ export const Header = () => {
                     </NavbarItem>
                     <NavbarItem>
                         <Tooltip content="Toggle Dark Mode" size="sm">
-                            <Button {...HEADER_BUTTON_PROPS} onPress={toggleTheme}>
+                            <Button
+                                {...HEADER_BUTTON_PROPS}
+                                onPress={toggleTheme}
+                                data-testid="theme-toggle"
+                            >
                                 {mounted ? (theme === 'dark' ? '🌚' : '🌞') : '🌞'}
                             </Button>
                         </Tooltip>
@@ -143,6 +155,12 @@ export const Header = () => {
                                 onPress={() => router.push('/candidates')}
                             >
                                 Candidates
+                            </Button>
+                            <Button
+                                className={clsx({ 'bg-primary': isActive('/positions') })}
+                                onPress={() => router.push('/positions')}
+                            >
+                                Positions
                             </Button>
                             {isAdmin() && (
                                 <Button

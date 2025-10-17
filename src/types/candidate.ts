@@ -3,4 +3,5 @@ export interface Candidate {
     id: string;
     nominations: string[];
     statement: string;
+    executive?: boolean;
 }

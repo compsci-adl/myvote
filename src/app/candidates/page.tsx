@@ -1,7 +1,6 @@
 'use client';
 
 import { Accordion, AccordionItem } from '@heroui/react';
-// import { useSession } from 'next-auth/react';
 import { useEffect, useRef, useState } from 'react';
 import useSWR from 'swr';
 import useSWRMutation from 'swr/mutation';
@@ -10,20 +9,15 @@ import { setRefs } from '@/constants/refs';
 import { useMount } from '@/hooks/use-mount';
 import { fetcher } from '@/lib/fetcher';
 import type { Candidate } from '@/types/candidate';
+import type { Position } from '@/types/position';
 
-// Create a simple store for focused users since we don't have the original store
+// Store for focused users
 const useFocusedUsers = () => ({ focusedUsers: [] });
 
 export default function CandidatesPage() {
-    // const { data: session } = useSession();
     const { focusedUsers } = useFocusedUsers();
     const r = useRef(new Map());
     setRefs(r);
-
-    interface Position {
-        id: string;
-        name: string;
-    }
 
     const [firstElection, setFirstElection] = useState<{
         id?: number;
@@ -105,14 +99,11 @@ export default function CandidatesPage() {
                     if (!candidateMap[candidate.id]) {
                         candidateMap[candidate.id] = {
                             ...candidate,
-                            positions: [positions[posId]?.name].filter(Boolean),
+                            positions: [posId],
                         };
                     } else {
-                        if (
-                            positions[posId]?.name &&
-                            !candidateMap[candidate.id].positions.includes(positions[posId].name)
-                        ) {
-                            candidateMap[candidate.id].positions.push(positions[posId].name);
+                        if (posId && !candidateMap[candidate.id].positions.includes(posId)) {
+                            candidateMap[candidate.id].positions.push(posId);
                         }
                     }
                 }
@@ -162,23 +153,52 @@ export default function CandidatesPage() {
                     </div>
                 ) : (
                     <Accordion defaultExpandedKeys={focusedUsers} className="w-full max-w-4xl">
-                        {Object.values(candidates).map((c) => (
-                            <AccordionItem
-                                id={c.id.toString()}
-                                key={c.id}
-                                title={c.name}
-                                aria-label={c.name}
-                                subtitle={c.positions?.join(', ') || 'No positions'}
-                            >
-                                <p
-                                    ref={(el) => {
-                                        if (el) r.current.set(c.id, el);
-                                    }}
-                                >
-                                    {c.statement}
-                                </p>
-                            </AccordionItem>
-                        ))}
+                        {Object.values(candidates)
+                            .sort((a, b) => a.name.localeCompare(b.name))
+                            .map((c) => {
+                                const candidatePositions = c.positions
+                                    .map((pid) => positions[pid])
+                                    .filter(Boolean);
+                                return (
+                                    <AccordionItem
+                                        id={c.id.toString()}
+                                        key={c.id}
+                                        title={c.name}
+                                        aria-label={c.name}
+                                        subtitle={
+                                            candidatePositions.length > 0 ? (
+                                                <>
+                                                    {candidatePositions.map((pos, idx) => (
+                                                        <span
+                                                            key={pos.id}
+                                                            className={
+                                                                'executive' in pos && pos.executive
+                                                                    ? 'text-orange-700'
+                                                                    : ''
+                                                            }
+                                                        >
+                                                            {pos.name}
+                                                            {idx < candidatePositions.length - 1
+                                                                ? ', '
+                                                                : ''}
+                                                        </span>
+                                                    ))}
+                                                </>
+                                            ) : (
+                                                'No positions'
+                                            )
+                                        }
+                                    >
+                                        <p
+                                            ref={(el) => {
+                                                if (el) r.current.set(c.id, el);
+                                            }}
+                                        >
+                                            {c.statement}
+                                        </p>
+                                    </AccordionItem>
+                                );
+                            })}
                     </Accordion>
                 )}
             </div>

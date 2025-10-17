@@ -18,20 +18,15 @@ import useSWRMutation from 'swr/mutation';
 import { PositionSection } from '@/components/PositionSection';
 import { fetcher } from '@/lib/fetcher';
 import type { Candidate } from '@/types/candidate';
+import type { Position } from '@/types/position';
 
 export default function VotingPage() {
     const { data: session } = useSession();
     const { isOpen, onOpen, onClose } = useDisclosure();
 
-    interface Position {
-        id: number;
-        name: string;
-    }
-
     const [firstElection, setFirstElection] = useState<{ id: number; status: number } | null>(null);
     const [positions, setPositions] = useState<Position[]>([]);
     const [message, setMessage] = useState('');
-    // Removed unused positionVotes state
     const [statusMessage, setStatusMessage] = useState<string>('');
     const [candidates, setCandidates] = useState<Record<string, Candidate[]>>({});
     const [candidatesLoading, setCandidatesLoading] = useState(true);
@@ -245,10 +240,16 @@ export default function VotingPage() {
                         if (!grouped[posId]) {
                             grouped[posId] = [];
                         }
-                        grouped[posId].push(candidate);
+                        const pos = positions.find((p) => String(p.id) === String(posId));
+                        grouped[posId].push({ ...candidate, executive: pos?.executive });
                     }
                 }
-                setCandidates(grouped);
+                // Shuffle candidates for each position
+                const shuffled: Record<string, Candidate[]> = {};
+                for (const posId in grouped) {
+                    shuffled[posId] = [...grouped[posId]].sort(() => Math.random() - 0.5);
+                }
+                setCandidates(shuffled);
             } finally {
                 // Only hide skeletons if positions are loaded
                 if (positions.length) setCandidatesLoading(false);
@@ -305,7 +306,7 @@ export default function VotingPage() {
     const isElectionClosed = statusNum === 4 || statusNum === 5;
     // Show placeholder position sections if loading and no positions yet
     const placeholderPositions = Array.from({ length: 3 }).map((_, i) => ({
-        id: -(i + 1), // negative numbers to avoid collision with real ids
+        id: String(-(i + 1)), // negative string ids to avoid collision with real ids
         name: 'Loading...',
     }));
 
@@ -371,15 +372,38 @@ export default function VotingPage() {
                     <div className="mb-4 text-center text-lg">
                         You have already voted, but you can change your vote while voting is open.
                     </div>
-                    {positions.map((position) => (
-                        <PositionSection
-                            key={position.id}
-                            position={position}
-                            candidates={candidates}
-                            setCandidates={setCandidates}
-                            loading={candidatesLoading}
-                        />
-                    ))}
+                    {positions.some((p) => p.executive) && (
+                        <h2 className="mt-8 mb-4 text-2xl font-bold text-orange-700 text-center">
+                            Executive Positions
+                        </h2>
+                    )}
+                    {positions
+                        .filter((p) => p.executive)
+                        .map((position) => (
+                            <PositionSection
+                                key={position.id}
+                                position={position}
+                                candidates={candidates}
+                                setCandidates={setCandidates}
+                                loading={candidatesLoading}
+                            />
+                        ))}
+                    {positions.some((p) => !p.executive) && (
+                        <h2 className="mt-8 mb-4 text-2xl font-bold text-center">
+                            Non-Executive Positions
+                        </h2>
+                    )}
+                    {positions
+                        .filter((p) => !p.executive)
+                        .map((position) => (
+                            <PositionSection
+                                key={position.id}
+                                position={position}
+                                candidates={candidates}
+                                setCandidates={setCandidates}
+                                loading={candidatesLoading}
+                            />
+                        ))}
                     <Divider />
                     <div className="mt-8 flex justify-center">
                         <Button
