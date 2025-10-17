@@ -18,20 +18,15 @@ import useSWRMutation from 'swr/mutation';
 import { PositionSection } from '@/components/PositionSection';
 import { fetcher } from '@/lib/fetcher';
 import type { Candidate } from '@/types/candidate';
+import type { Position } from '@/types/position';
 
 export default function VotingPage() {
     const { data: session } = useSession();
     const { isOpen, onOpen, onClose } = useDisclosure();
 
-    interface Position {
-        id: number;
-        name: string;
-    }
-
     const [firstElection, setFirstElection] = useState<{ id: number; status: number } | null>(null);
     const [positions, setPositions] = useState<Position[]>([]);
     const [message, setMessage] = useState('');
-    // Removed unused positionVotes state
     const [statusMessage, setStatusMessage] = useState<string>('');
     const [candidates, setCandidates] = useState<Record<string, Candidate[]>>({});
     const [candidatesLoading, setCandidatesLoading] = useState(true);
@@ -245,7 +240,8 @@ export default function VotingPage() {
                         if (!grouped[posId]) {
                             grouped[posId] = [];
                         }
-                        grouped[posId].push(candidate);
+                        const pos = positions.find((p) => String(p.id) === String(posId));
+                        grouped[posId].push({ ...candidate, executive: pos?.executive });
                     }
                 }
                 // Shuffle candidates for each position
@@ -310,7 +306,7 @@ export default function VotingPage() {
     const isElectionClosed = statusNum === 4 || statusNum === 5;
     // Show placeholder position sections if loading and no positions yet
     const placeholderPositions = Array.from({ length: 3 }).map((_, i) => ({
-        id: -(i + 1), // negative numbers to avoid collision with real ids
+        id: String(-(i + 1)), // negative string ids to avoid collision with real ids
         name: 'Loading...',
     }));
 

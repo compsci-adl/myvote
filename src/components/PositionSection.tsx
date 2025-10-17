@@ -36,10 +36,15 @@ const CandidateCard = memo(({ i, c }: { i: number; c: CandidateIndividual }) => 
                     className={clsx(
                         isOver && 'translate-x-3',
                         isOver && 'rotate-1',
-                        'm-3 bg-primary-100 p-3 select-none',
+                        'm-3 p-3 select-none',
+                        c.position.executive ? 'bg-orange-100 border-orange-500' : 'bg-primary-100',
+                        isDragging && (c.position.executive ? 'bg-orange-200' : 'bg-blue-200'),
                         isDragging && 'opacity-50'
                     )}
-                    style={{ touchAction: 'none' }}
+                    style={{
+                        touchAction: 'none',
+                        borderColor: c.position.executive ? '#f97316' : undefined,
+                    }}
                 >
                     {i === 0 ? (
                         <p
@@ -99,14 +104,14 @@ export const PositionSection = ({
     loading = false,
 }: {
     position: Position;
-    candidates: Record<number, Candidate[]>;
-    setCandidates: React.Dispatch<React.SetStateAction<Record<number, Candidate[]>>>;
+    candidates: Record<string, Candidate[]>;
+    setCandidates: React.Dispatch<React.SetStateAction<Record<string, Candidate[]>>>;
     loading?: boolean;
 }) => {
     // Use candidates passed from parent, do not refetch here
     const showSkeletons = loading;
     const showCandidates =
-        !loading && candidates[position.id] && candidates[position.id].length > 0;
+        !loading && candidates[String(position.id)] && candidates[String(position.id)].length > 0;
 
     const isTouchDevice =
         typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
@@ -129,7 +134,7 @@ export const PositionSection = ({
         setActiveId(null);
         const { active, over } = event;
         if (!over || active.id === over.id) return;
-        const positionId = position.id;
+        const positionId = String(position.id);
         const items = candidates[positionId] || [];
         const oldIndex = items.findIndex((x) => x.id === active.id);
         const newIndex = items.findIndex((x) => x.id === over.id);
@@ -142,7 +147,14 @@ export const PositionSection = ({
         <>
             <div className="relative flex items-center py-5">
                 <div className="flex-grow border-t border-gray-400"></div>
-                <span className="mx-4 flex-shrink text-lg font-bold">{position.name}</span>
+                <span
+                    className={clsx(
+                        'mx-4 flex-shrink text-lg font-bold',
+                        position.executive && 'text-orange-700'
+                    )}
+                >
+                    {position.name}
+                </span>
                 <div className="flex-grow border-t border-gray-400"></div>
             </div>
             <DndContext
@@ -152,7 +164,7 @@ export const PositionSection = ({
                 onDragEnd={handleDragEnd}
             >
                 <SortableContext
-                    items={showCandidates ? candidates[position.id].map((c) => c.id) : []}
+                    items={showCandidates ? candidates[String(position.id)].map((c) => c.id) : []}
                     strategy={verticalListSortingStrategy}
                 >
                     <div className="grid grid-cols-[repeat(auto-fill,minmax(100px,250px))] items-center justify-center">
@@ -169,7 +181,7 @@ export const PositionSection = ({
                                   </div>
                               ))
                             : showCandidates
-                              ? candidates[position.id].map((c, i) => (
+                              ? candidates[String(position.id)].map((c, i) => (
                                     <CandidateCard key={c.id} i={i} c={{ ...c, position }} />
                                 ))
                               : null}
@@ -178,7 +190,7 @@ export const PositionSection = ({
                 <DragOverlay>
                     {activeId
                         ? (() => {
-                              const draggedList = candidates[position.id] || [];
+                              const draggedList = candidates[String(position.id)] || [];
                               const draggedIndex = draggedList.findIndex((c) => c.id === activeId);
                               const dragged = draggedList[draggedIndex];
                               if (!dragged) return null;
@@ -189,13 +201,17 @@ export const PositionSection = ({
                               else numberOrMedal = draggedIndex + 1;
                               return (
                                   <Card
-                                      className="m-3 bg-primary-100 p-3 select-none"
+                                      className={clsx(
+                                          'm-3 p-3 select-none',
+                                          dragged?.executive ? 'bg-orange-100' : 'bg-primary-100'
+                                      )}
                                       style={{
                                           userSelect: 'none',
                                           WebkitUserSelect: 'none',
                                           borderRadius: '1rem',
                                           minWidth: 220,
                                           minHeight: 100,
+                                          borderColor: dragged?.executive ? '#f97316' : undefined,
                                       }}
                                   >
                                       <div style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>

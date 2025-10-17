@@ -1,4 +1,5 @@
 export interface Position {
-    id: number;
+    id: string;
     name: string;
+    executive?: boolean;
 }
