@@ -37,8 +37,8 @@ const CandidateCard = memo(({ i, c }: { i: number; c: CandidateIndividual }) => 
                         isOver && 'translate-x-3',
                         isOver && 'rotate-1',
                         'm-3 p-3 select-none',
-                        c.position.executive ? 'bg-orange-100 border-orange-500' : 'bg-primary-100',
-                        isDragging && (c.position.executive ? 'bg-orange-200' : 'bg-blue-200'),
+                        c.position.executive ? 'bg-orange-300' : 'bg-primary-100',
+                        isDragging && (c.position.executive ? 'bg-orange-300' : 'bg-blue-200'),
                         isDragging && 'opacity-50'
                     )}
                     style={{
@@ -203,7 +203,7 @@ export const PositionSection = ({
                                   <Card
                                       className={clsx(
                                           'm-3 p-3 select-none',
-                                          dragged?.executive ? 'bg-orange-100' : 'bg-primary-100'
+                                          dragged?.executive ? 'bg-orange-300' : 'bg-primary-100'
                                       )}
                                       style={{
                                           userSelect: 'none',
