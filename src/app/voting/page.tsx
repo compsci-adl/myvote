@@ -248,7 +248,12 @@ export default function VotingPage() {
                         grouped[posId].push(candidate);
                     }
                 }
-                setCandidates(grouped);
+                // Shuffle candidates for each position
+                const shuffled: Record<string, Candidate[]> = {};
+                for (const posId in grouped) {
+                    shuffled[posId] = [...grouped[posId]].sort(() => Math.random() - 0.5);
+                }
+                setCandidates(shuffled);
             } finally {
                 // Only hide skeletons if positions are loaded
                 if (positions.length) setCandidatesLoading(false);
