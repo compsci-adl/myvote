@@ -372,15 +372,38 @@ export default function VotingPage() {
                     <div className="mb-4 text-center text-lg">
                         You have already voted, but you can change your vote while voting is open.
                     </div>
-                    {positions.map((position) => (
-                        <PositionSection
-                            key={position.id}
-                            position={position}
-                            candidates={candidates}
-                            setCandidates={setCandidates}
-                            loading={candidatesLoading}
-                        />
-                    ))}
+                    {positions.some((p) => p.executive) && (
+                        <h2 className="mt-8 mb-4 text-2xl font-bold text-orange-700 text-center">
+                            Executive Positions
+                        </h2>
+                    )}
+                    {positions
+                        .filter((p) => p.executive)
+                        .map((position) => (
+                            <PositionSection
+                                key={position.id}
+                                position={position}
+                                candidates={candidates}
+                                setCandidates={setCandidates}
+                                loading={candidatesLoading}
+                            />
+                        ))}
+                    {positions.some((p) => !p.executive) && (
+                        <h2 className="mt-8 mb-4 text-2xl font-bold text-center">
+                            Non-Executive Positions
+                        </h2>
+                    )}
+                    {positions
+                        .filter((p) => !p.executive)
+                        .map((position) => (
+                            <PositionSection
+                                key={position.id}
+                                position={position}
+                                candidates={candidates}
+                                setCandidates={setCandidates}
+                                loading={candidatesLoading}
+                            />
+                        ))}
                     <Divider />
                     <div className="mt-8 flex justify-center">
                         <Button
