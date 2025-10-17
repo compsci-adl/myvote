@@ -162,7 +162,9 @@ export default function CandidatesPage() {
                     </div>
                 ) : (
                     <Accordion defaultExpandedKeys={focusedUsers} className="w-full max-w-4xl">
-                        {Object.values(candidates).map((c) => (
+                        {Object.values(candidates)
+                            .sort((a, b) => a.name.localeCompare(b.name))
+                            .map((c) => (
                             <AccordionItem
                                 id={c.id.toString()}
                                 key={c.id}
