@@ -27,11 +27,13 @@ interface Position {
     position_name: string;
     winners: Winner[];
     candidates: Candidate[];
+    vacancies: number;
 }
 export default function Results({ electionId }: ResultsProps) {
     const [results, setResults] = useState<Position[]>([]);
     const [winnerSelections, setWinnerSelections] = useState<Record<string, string>>({}); // candidateId -> positionId
     const [finalized, setFinalized] = useState(false);
+    const [warnings, setWarnings] = useState<string[]>([]);
 
     // Fetch election results
     type ApiResult = { results: Position[] };
@@ -76,6 +78,38 @@ export default function Results({ electionId }: ResultsProps) {
             setFinalized(false);
         }
     }, [multiWinners.length]);
+
+    // Compute warnings for unfilled roles
+    useEffect(() => {
+        if (
+            Object.keys(winnerSelections).length === multiWinners.length &&
+            multiWinners.length > 0
+        ) {
+            const exclusions: Record<string, string[]> = {};
+            for (const mw of multiWinners) {
+                const keepPos = winnerSelections[mw.id];
+                for (const pos of results) {
+                    if (pos.position_id !== keepPos) {
+                        if (!exclusions[pos.position_id]) exclusions[pos.position_id] = [];
+                        exclusions[pos.position_id].push(mw.id);
+                    }
+                }
+            }
+            const newWarnings: string[] = [];
+            for (const pos of results) {
+                const excluded = exclusions[pos.position_id] || [];
+                const finalWinners = pos.winners.filter((w) => !excluded.includes(w.id));
+                if (finalWinners.length < pos.vacancies) {
+                    newWarnings.push(
+                        `${pos.position_name} would have ${finalWinners.length} winner(s) but needs ${pos.vacancies}`
+                    );
+                }
+            }
+            setWarnings(newWarnings);
+        } else {
+            setWarnings([]);
+        }
+    }, [winnerSelections, multiWinners, results]);
 
     // Remove a candidate from all but the selected position and re-run results
     const handleConfirmSelections = async () => {
@@ -123,11 +157,34 @@ export default function Results({ electionId }: ResultsProps) {
                                 }
                             >
                                 <option value="">Select position</option>
-                                {mw.positions.map((pid, idx) => (
-                                    <option key={pid} value={pid}>
-                                        {mw.positionNames[idx]}
-                                    </option>
-                                ))}
+                                {mw.positions.map((pid, idx) => {
+                                    const pos = results.find((p) => p.position_id === pid);
+                                    const tempSelections = { ...winnerSelections, [mw.id]: pid };
+                                    const projWinners = pos
+                                        ? pos.winners.filter((w) => {
+                                              const mw2 = multiWinners.find((m) => m.id === w.id);
+                                              if (mw2) {
+                                                  return tempSelections[w.id] === pos.position_id;
+                                              }
+                                              return true;
+                                          })
+                                        : [];
+                                    const isOverCapacity = pos && projWinners.length > pos.vacancies;
+                                    const isAtCapacity =
+                                        pos &&
+                                        projWinners.length >= pos.vacancies &&
+                                        !projWinners.some((w) => w.id === mw.id);
+                                    const label = isOverCapacity
+                                        ? '(Over Capacity)'
+                                        : isAtCapacity
+                                          ? '(At Capacity)'
+                                          : '';
+                                    return (
+                                        <option key={pid} value={pid} disabled={isOverCapacity}>
+                                            {`${mw.positionNames[idx]} ${label}`}
+                                        </option>
+                                    );
+                                })}
                             </select>
                         </div>
                     ))}
@@ -141,20 +198,22 @@ export default function Results({ electionId }: ResultsProps) {
                 </div>
             )}
 
+            {warnings.length > 0 && (
+                <div className="mb-6 p-4 border rounded bg-red-50 dark:bg-red-900/30 dark:border-red-700/50">
+                    <h2 className="text-lg font-semibold mb-2 text-red-600 dark:text-red-400">
+                        Warning: Unfilled Roles
+                    </h2>
+                    <ul className="list-disc pl-5">
+                        {warnings.map((warning, idx) => (
+                            <li key={idx} className="text-red-700 dark:text-red-300">
+                                {warning}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+
             {results.map((position) => {
-                // Always ensure there is at least one winner if candidates exist
-                let winners = position.winners;
-                if (winners.length === 0 && position.candidates.length > 0) {
-                    // Find top ranking (lowest number)
-                    const minRank = Math.min(...position.candidates.map((c) => c.ranking));
-                    winners = position.candidates
-                        .filter((c) => c.ranking === minRank)
-                        .map((c) => ({
-                            id: c.id,
-                            name: c.name,
-                            ranking: c.ranking,
-                        }));
-                }
                 return (
                     <div
                         key={position.position_id}
@@ -167,9 +226,9 @@ export default function Results({ electionId }: ResultsProps) {
                         <h3 className="mt-2 font-medium text-green-600 dark:text-green-400">
                             Winner(s):
                         </h3>
-                        {winners.length > 0 ? (
+                        {position.winners.length > 0 ? (
                             <ul className="list-disc pl-5">
-                                {winners.map((winner) => (
+                                {position.winners.map((winner) => (
                                     <li key={winner.id} className="font-semibold">
                                         {winner.name || winner.id}
                                     </li>

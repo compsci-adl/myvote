@@ -17,6 +17,7 @@ interface ResultPosition {
     position_name: string;
     winners: ResultCandidate[];
     candidates: ResultCandidate[];
+    vacancies: number;
 }
 
 export async function GET(req: NextRequest) {
@@ -105,7 +106,14 @@ export async function GET(req: NextRequest) {
         }
         // If no ballots, elect no one
         if (pos.ballots.length === 0) {
-            pos.winners = [];
+            // Elect top vacancies candidates as winners
+            const elected = posCandidates.slice(0, pos.vacancies);
+            pos.winners = elected.map((cand, idx) => ({
+                id: cand.id,
+                name: cand.name,
+                ranking: idx + 1,
+                preferences_count: 0,
+            }));
             pos.candidates = posCandidates.map((cand, idx) => ({
                 id: cand.id,
                 name: cand.name,
@@ -159,10 +167,10 @@ export async function GET(req: NextRequest) {
         pos.hareclarkTallies = tallies;
     }
 
-    // Remove vacancies, ballots, candidateIds from output
+    // Remove ballots, candidateIds from output
     const results: ResultPosition[] = Object.values(grouped).map(
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        ({ vacancies, ballots, candidateIds, ...rest }) => rest
+        ({ ballots, candidateIds, ...rest }) => rest
     );
     return NextResponse.json({ results }, { status: 200 });
 }
@@ -239,12 +247,20 @@ export async function POST(req: NextRequest) {
                 continue;
             }
             if (pos.ballots.length === 0) {
-                pos.winners = [];
+                // Elect top vacancies candidates as winners
+                const elected = posCandidates.slice(0, pos.vacancies);
+                pos.winners = elected.map((cand, idx) => ({
+                    id: cand.id,
+                    name: cand.name,
+                    ranking: idx + 1,
+                    preferences_count: 0,
+                }));
                 pos.candidates = posCandidates.map((cand, idx) => ({
                     id: cand.id,
                     name: cand.name,
                     ranking: idx + 1,
                     preferences_count: 0,
+                    total_points: 0,
                 }));
                 continue;
             }
@@ -319,10 +335,10 @@ export async function POST(req: NextRequest) {
         }
     }
 
-    // Remove vacancies, ballots, candidateIds from output
+    // Remove ballots, candidateIds from output
     const results: ResultPosition[] = Object.values(grouped).map(
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        ({ vacancies, ballots, candidateIds, ...rest }) => rest
+        ({ ballots, candidateIds, ...rest }) => rest
     );
     return NextResponse.json({ results }, { status: 200 });
 }
