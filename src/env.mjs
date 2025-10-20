@@ -14,6 +14,8 @@ export const env = createEnv({
         DATABASE_AUTH_TOKEN: isDev ? z.string().optional() : z.string().min(1),
         MEMBER_DATABASE_URL: z.string().min(1).optional(),
         MEMBER_DATABASE_AUTH_TOKEN: z.string().optional(),
+    },
+    client: {
         NEXT_PUBLIC_FEEDBACK_FORM_URL: z.string().url().min(1).optional(),
     },
     experimental__runtimeEnv: {
