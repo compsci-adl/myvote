@@ -11,6 +11,7 @@ interface ResultCandidate {
     name: string;
     ranking: number;
     preferences_count: number;
+    borda_points: number;
 }
 interface ResultPosition {
     position_id: string;
@@ -113,12 +114,14 @@ export async function GET(req: NextRequest) {
                 name: cand.name,
                 ranking: idx + 1,
                 preferences_count: 0,
+                borda_points: 0,
             }));
             pos.candidates = posCandidates.map((cand, idx) => ({
                 id: cand.id,
                 name: cand.name,
                 ranking: idx + 1,
                 preferences_count: 0,
+                borda_points: 0,
             }));
             continue;
         }
@@ -126,6 +129,14 @@ export async function GET(req: NextRequest) {
         const candidateIds = posCandidates.map((c) => String(c.id));
         const ballots = pos.ballots.map((ballot) => ballot.map((cid) => String(cid)));
         const { elected, tallies } = hareclarkWithTallies(candidateIds, ballots, pos.vacancies);
+        // Compute Borda scores
+        const bordaScores: Record<string, number> = {};
+        for (const ballot of pos.ballots) {
+            for (let i = 0; i < ballot.length; i++) {
+                const cid = ballot[i];
+                bordaScores[cid] = (bordaScores[cid] || 0) + (ballot.length - i);
+            }
+        }
         // Winners first, then non-winners by Hare-Clark tallies desc, then name
         const winnerSet = new Set(elected.map((cid: string) => String(cid)));
         const sortedCandidates = [
@@ -138,9 +149,11 @@ export async function GET(req: NextRequest) {
             ...posCandidates
                 .filter((c) => !winnerSet.has(String(c.id)))
                 .sort((a, b) => {
-                    // Sort by Hare-Clark tallies desc, then name
-                    const diff = (tallies[b.id] ?? 0) - (tallies[a.id] ?? 0);
-                    if (diff !== 0) return diff;
+                    // Sort by Hare-Clark tallies desc, then Borda desc, then name
+                    const hcDiff = (tallies[b.id] ?? 0) - (tallies[a.id] ?? 0);
+                    if (hcDiff !== 0) return hcDiff;
+                    const bordaDiff = (bordaScores[b.id] ?? 0) - (bordaScores[a.id] ?? 0);
+                    if (bordaDiff !== 0) return bordaDiff;
                     return a.name.localeCompare(b.name);
                 }),
         ];
@@ -150,6 +163,7 @@ export async function GET(req: NextRequest) {
             ranking: idx + 1,
             preferences_count: 0,
             total_points: tallies[cand.id] ?? 0,
+            borda_points: bordaScores[cand.id] || 0,
         }));
         // Winners array (for UI)
         pos.winners = elected.map((cid: string, idx: number) => {
@@ -160,6 +174,7 @@ export async function GET(req: NextRequest) {
                 name: cand ? cand.name : cidStr,
                 ranking: pos.candidates.find((c) => c.id === cidStr)?.ranking ?? idx + 1,
                 preferences_count: 0,
+                borda_points: bordaScores[cidStr] || 0,
             };
         });
         // Attach Hare-Clark tallies for debug
@@ -254,6 +269,7 @@ export async function POST(req: NextRequest) {
                     name: cand.name,
                     ranking: idx + 1,
                     preferences_count: 0,
+                    borda_points: 0,
                 }));
                 pos.candidates = posCandidates.map((cand, idx) => ({
                     id: cand.id,
@@ -261,6 +277,7 @@ export async function POST(req: NextRequest) {
                     ranking: idx + 1,
                     preferences_count: 0,
                     total_points: 0,
+                    borda_points: 0,
                 }));
                 continue;
             }
@@ -269,6 +286,13 @@ export async function POST(req: NextRequest) {
                 ballot.filter((cid) => !excluded.includes(cid)).map((cid) => String(cid))
             );
             const { elected, tallies } = hareclarkWithTallies(candidateIds, ballots, pos.vacancies);
+            const bordaScores: Record<string, number> = {};
+            for (const ballot of pos.ballots) {
+                for (let i = 0; i < ballot.length; i++) {
+                    const cid = ballot[i];
+                    bordaScores[cid] = (bordaScores[cid] || 0) + (ballot.length - i);
+                }
+            }
             const winnerSet = new Set(elected.map((cid: string) => String(cid)));
             const sortedCandidates = [
                 ...posCandidates
@@ -279,8 +303,11 @@ export async function POST(req: NextRequest) {
                 ...posCandidates
                     .filter((c) => !winnerSet.has(String(c.id)))
                     .sort((a, b) => {
-                        const diff = (tallies[b.id] ?? 0) - (tallies[a.id] ?? 0);
-                        if (diff !== 0) return diff;
+                        // Sort by Hare-Clark tallies desc, then Borda desc, then name
+                        const hcDiff = (tallies[b.id] ?? 0) - (tallies[a.id] ?? 0);
+                        if (hcDiff !== 0) return hcDiff;
+                        const bordaDiff = (bordaScores[b.id] ?? 0) - (bordaScores[a.id] ?? 0);
+                        if (bordaDiff !== 0) return bordaDiff;
                         return a.name.localeCompare(b.name);
                     }),
             ];
@@ -290,6 +317,7 @@ export async function POST(req: NextRequest) {
                 ranking: idx + 1,
                 preferences_count: 0,
                 total_points: tallies[cand.id] ?? 0,
+                borda_points: bordaScores[cand.id] || 0,
             }));
             pos.winners = elected.map((cid: string, idx: number) => {
                 const cidStr = String(cid);
@@ -299,6 +327,7 @@ export async function POST(req: NextRequest) {
                     name: cand ? cand.name : cidStr,
                     ranking: pos.candidates.find((c) => c.id === cidStr)?.ranking ?? idx + 1,
                     preferences_count: 0,
+                    borda_points: bordaScores[cidStr] || 0,
                 };
             });
             // @ts-expect-error: attach for debug only

@@ -14,6 +14,7 @@ interface Candidate {
     name: string;
     ranking: number;
     total_points: number;
+    borda_points: number;
 }
 
 interface Winner {
@@ -175,7 +176,7 @@ export default function Results({ electionId }: ResultsProps) {
                                         projWinners.length >= pos.vacancies &&
                                         !projWinners.some((w) => w.id === mw.id);
                                     const label = isOverCapacity
-                                        ? '(Over Capacity)'
+                                        ? '(Full)'
                                         : isAtCapacity
                                           ? '(At Capacity)'
                                           : '';
@@ -246,7 +247,8 @@ export default function Results({ electionId }: ResultsProps) {
                                 <tr className="bg-gray-200 dark:bg-gray-900">
                                     <th className="border p-2">Ranking</th>
                                     <th className="border p-2">Candidate</th>
-                                    <th className="border p-2">Total Points</th>
+                                    <th className="border p-2">Hare-Clark Points</th>
+                                    <th className="border p-2">Borda Points</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -261,6 +263,11 @@ export default function Results({ electionId }: ResultsProps) {
                                             <td className="border p-2">
                                                 {typeof candidate.total_points === 'number'
                                                     ? candidate.total_points
+                                                    : ''}
+                                            </td>
+                                            <td className="border p-2">
+                                                {typeof candidate.borda_points === 'number'
+                                                    ? candidate.borda_points
                                                     : ''}
                                             </td>
                                         </tr>
