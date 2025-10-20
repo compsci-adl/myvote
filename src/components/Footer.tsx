@@ -69,7 +69,7 @@ export const Footer = () => {
             <div className="grid grid-cols-2 items-center gap-2 mobile:grid-cols-1 mobile:justify-items-center mobile:gap-4">
                 <div className="flex items-center gap-2">
                     <img src="/favicon.svg" alt="Logo" className="w-10" />
-                    <h1 className="ml-1 text-xl font-bold text-black">MyVote</h1>
+                    <h1 className="ml-1 text-xl font-bold text-black dark:text-white">MyVote</h1>
                 </div>
 
                 <div className="mt-0 flex gap-6 justify-self-end mobile:justify-self-auto">

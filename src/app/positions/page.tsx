@@ -79,7 +79,28 @@ export default function PositionsPage() {
                 ) : (
                     <Accordion className="w-full max-w-4xl">
                         {Object.values(positions)
-                            .sort((a, b) => a.name.localeCompare(b.name))
+                            .sort((a, b) => {
+                                const execOrder = [
+                                    'President',
+                                    'Vice-President',
+                                    'Treasurer',
+                                    'Secretary',
+                                    'Partnerships & Sponsorships Manager',
+                                ];
+                                const aIndex = execOrder.indexOf(a.name);
+                                const bIndex = execOrder.indexOf(b.name);
+                                if (a.executive && b.executive) {
+                                    if (aIndex !== -1 && bIndex !== -1) {
+                                        return aIndex - bIndex;
+                                    }
+                                    if (aIndex !== -1) return -1;
+                                    if (bIndex !== -1) return 1;
+                                    return a.name.localeCompare(b.name);
+                                }
+                                if (a.executive) return -1;
+                                if (b.executive) return 1;
+                                return a.name.localeCompare(b.name);
+                            })
                             .map((pos) => (
                                 <AccordionItem
                                     id={pos.id.toString()}

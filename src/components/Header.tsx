@@ -15,7 +15,8 @@ import { signIn, signOut, useSession } from 'next-auth/react';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 
-import { env } from '../env.mjs';
+import { env } from '@/env.mjs';
+
 import { useHelpModal } from '../helpers/help-modal';
 
 const HEADER_BUTTON_PROPS = {
@@ -30,14 +31,16 @@ export const Header = () => {
     const { theme, setTheme } = useTheme();
     const { data: session, status } = useSession();
     const [isPaidMember, setIsPaidMember] = useState(false);
+    const [membershipLoaded, setMembershipLoaded] = useState(false);
     const [mounted, setMounted] = useState(false);
+    const [feedbackUrl, setFeedbackUrl] = useState<string | undefined>();
     const router = useRouter();
     const pathname = usePathname();
     const openHelpModal = useHelpModal((s) => s.open);
 
-    // Handle hydration
     useEffect(() => {
         setMounted(true);
+        setFeedbackUrl(env.NEXT_PUBLIC_FEEDBACK_FORM_URL);
     }, []);
 
     const isActive = (path: string) => pathname === path;
@@ -79,7 +82,11 @@ export const Header = () => {
                     );
                 } catch {
                     setIsPaidMember(false);
+                } finally {
+                    setMembershipLoaded(true);
                 }
+            } else {
+                setMembershipLoaded(true);
             }
         };
 
@@ -92,7 +99,7 @@ export const Header = () => {
                 maxWidth="xl"
                 position="static"
                 classNames={{ wrapper: 'px-4' }}
-                {...(isPaidMember ? {} : { isBordered: true })}
+                isBordered={!isPaidMember || !membershipLoaded}
             >
                 <NavbarBrand>
                     <img src="/favicon.svg" alt="Logo" className="mr-2 w-6" />
@@ -112,19 +119,21 @@ export const Header = () => {
                             </Button>
                         </Tooltip>
                     </NavbarItem>
-                    <NavbarItem>
-                        <Tooltip content="Send Feedback" size="sm">
-                            <Button
-                                {...HEADER_BUTTON_PROPS}
-                                as="a"
-                                href={env.NEXT_PUBLIC_FEEDBACK_FORM_URL}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                            >
-                                🗣️
-                            </Button>
-                        </Tooltip>
-                    </NavbarItem>
+                    {mounted && (
+                        <NavbarItem>
+                            <Tooltip content="Send Feedback" size="sm">
+                                <Button
+                                    {...HEADER_BUTTON_PROPS}
+                                    as="a"
+                                    href={feedbackUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    🗣️
+                                </Button>
+                            </Tooltip>
+                        </NavbarItem>
+                    )}
                     <NavbarItem>
                         <Tooltip content="Toggle Dark Mode" size="sm">
                             <Button
@@ -140,7 +149,7 @@ export const Header = () => {
             </Navbar>
 
             {/* Show tab bar only for paid members */}
-            {isPaidMember && (
+            {membershipLoaded && isPaidMember && (
                 <Navbar isBordered maxWidth="xl" position="static" classNames={{ wrapper: 'px-4' }}>
                     <NavbarContent justify="center" className="w-full">
                         <ButtonGroup className="mx-auto">

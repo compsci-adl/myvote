@@ -10,13 +10,16 @@ interface ResultCandidate {
     id: string;
     name: string;
     ranking: number;
-    preferences_count: number;
+    total_points: number;
+    borda_points: number;
+    excluded: boolean;
 }
 interface ResultPosition {
     position_id: string;
     position_name: string;
     winners: ResultCandidate[];
     candidates: ResultCandidate[];
+    vacancies: number;
 }
 
 export async function GET(req: NextRequest) {
@@ -105,12 +108,23 @@ export async function GET(req: NextRequest) {
         }
         // If no ballots, elect no one
         if (pos.ballots.length === 0) {
-            pos.winners = [];
+            // Elect top vacancies candidates as winners
+            const elected = posCandidates.slice(0, pos.vacancies);
+            pos.winners = elected.map((cand, idx) => ({
+                id: cand.id,
+                name: cand.name,
+                ranking: idx + 1,
+                total_points: 0,
+                borda_points: 0,
+                excluded: false,
+            }));
             pos.candidates = posCandidates.map((cand, idx) => ({
                 id: cand.id,
                 name: cand.name,
                 ranking: idx + 1,
-                preferences_count: 0,
+                total_points: 0,
+                borda_points: 0,
+                excluded: false,
             }));
             continue;
         }
@@ -118,6 +132,14 @@ export async function GET(req: NextRequest) {
         const candidateIds = posCandidates.map((c) => String(c.id));
         const ballots = pos.ballots.map((ballot) => ballot.map((cid) => String(cid)));
         const { elected, tallies } = hareclarkWithTallies(candidateIds, ballots, pos.vacancies);
+        // Compute Borda scores
+        const bordaScores: Record<string, number> = {};
+        for (const ballot of pos.ballots) {
+            for (let i = 0; i < ballot.length; i++) {
+                const cid = ballot[i];
+                bordaScores[cid] = (bordaScores[cid] || 0) + (ballot.length - i);
+            }
+        }
         // Winners first, then non-winners by Hare-Clark tallies desc, then name
         const winnerSet = new Set(elected.map((cid: string) => String(cid)));
         const sortedCandidates = [
@@ -130,9 +152,11 @@ export async function GET(req: NextRequest) {
             ...posCandidates
                 .filter((c) => !winnerSet.has(String(c.id)))
                 .sort((a, b) => {
-                    // Sort by Hare-Clark tallies desc, then name
-                    const diff = (tallies[b.id] ?? 0) - (tallies[a.id] ?? 0);
-                    if (diff !== 0) return diff;
+                    // Sort by Hare-Clark tallies desc, then Borda desc, then name
+                    const hcDiff = (tallies[b.id] ?? 0) - (tallies[a.id] ?? 0);
+                    if (hcDiff !== 0) return hcDiff;
+                    const bordaDiff = (bordaScores[b.id] ?? 0) - (bordaScores[a.id] ?? 0);
+                    if (bordaDiff !== 0) return bordaDiff;
                     return a.name.localeCompare(b.name);
                 }),
         ];
@@ -140,29 +164,34 @@ export async function GET(req: NextRequest) {
             id: String(cand.id),
             name: cand.name,
             ranking: idx + 1,
-            preferences_count: 0,
             total_points: tallies[cand.id] ?? 0,
+            borda_points: bordaScores[cand.id] || 0,
+            excluded: false,
         }));
-        // Winners array (for UI)
-        pos.winners = elected.map((cid: string, idx: number) => {
-            const cidStr = String(cid);
-            const cand = posCandidates.find((c) => String(c.id) === cidStr);
-            return {
-                id: cand ? String(cand.id) : cidStr,
-                name: cand ? cand.name : cidStr,
-                ranking: pos.candidates.find((c) => c.id === cidStr)?.ranking ?? idx + 1,
-                preferences_count: 0,
-            };
-        });
+        let numWinners = Math.min(pos.vacancies, elected.length);
+        if (numWinners < pos.vacancies) {
+            const remaining = sortedCandidates
+                .slice(numWinners)
+                .filter((c) => !winnerSet.has(String(c.id)));
+            numWinners += Math.min(remaining.length, pos.vacancies - numWinners);
+        }
+        pos.winners = sortedCandidates.slice(0, numWinners).map((cand, idx) => ({
+            id: String(cand.id),
+            name: cand.name,
+            ranking: idx + 1,
+            total_points: tallies[cand.id] ?? 0,
+            borda_points: bordaScores[cand.id] || 0,
+            excluded: false,
+        }));
         // Attach Hare-Clark tallies for debug
         // @ts-expect-error: attach for debug only
         pos.hareclarkTallies = tallies;
     }
 
-    // Remove vacancies, ballots, candidateIds from output
+    // Remove ballots, candidateIds from output
     const results: ResultPosition[] = Object.values(grouped).map(
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        ({ vacancies, ballots, candidateIds, ...rest }) => rest
+        ({ ballots, candidateIds, ...rest }) => rest
     );
     return NextResponse.json({ results }, { status: 200 });
 }
@@ -177,6 +206,7 @@ export async function POST(req: NextRequest) {
     }
     const body = await req.json();
     const exclusions: Record<string, string[]> = body.exclusions || {};
+    const manualOverrides: Record<string, string[]> = body.manualOverrides || {};
 
     // Get all ballots for this election, joined with positions
     const data = await db
@@ -228,27 +258,133 @@ export async function POST(req: NextRequest) {
     }
 
     // Helper to run Hare-Clark for all positions with current exclusions
-    function runAllHareClark(groupedObj: typeof grouped, exclusionsObj: Record<string, string[]>) {
+    function runAllHareClark(
+        groupedObj: typeof grouped,
+        exclusionsObj: Record<string, string[]>,
+        manualOverridesObj: Record<string, string[]>
+    ) {
         for (const pos of Object.values(groupedObj)) {
-            let posCandidates = allCandidates.filter((cand) => pos.candidateIds.includes(cand.id));
+            const posCandidates = allCandidates.filter((cand) =>
+                pos.candidateIds.includes(cand.id)
+            );
             const excluded = exclusionsObj[pos.position_id] || [];
-            posCandidates = posCandidates.filter((cand) => !excluded.includes(cand.id));
-            if (posCandidates.length === 0) {
-                pos.winners = [];
-                pos.candidates = [];
-                continue;
+            const posCandidatesFiltered = posCandidates.filter((c) => !excluded.includes(c.id));
+            // Compute bordaScores from all ballots
+            const bordaScores: Record<string, number> = {};
+            for (const ballot of pos.ballots) {
+                for (let i = 0; i < ballot.length; i++) {
+                    const cid = ballot[i];
+                    bordaScores[cid] = (bordaScores[cid] || 0) + (ballot.length - i);
+                }
             }
-            if (pos.ballots.length === 0) {
+            if (posCandidatesFiltered.length === 0) {
                 pos.winners = [];
-                pos.candidates = posCandidates.map((cand, idx) => ({
-                    id: cand.id,
-                    name: cand.name,
-                    ranking: idx + 1,
-                    preferences_count: 0,
+                pos.candidates = posCandidates.map((c) => ({
+                    id: c.id,
+                    name: c.name,
+                    ranking: 0,
+                    total_points: 0,
+                    borda_points: bordaScores[c.id] || 0,
+                    excluded: excluded.includes(c.id),
                 }));
                 continue;
             }
-            const candidateIds = posCandidates.map((c) => String(c.id));
+            const manual = manualOverridesObj[pos.position_id];
+            if (manual && manual.length > 0) {
+                // Manual override: still compute points, but set winners manually
+                if (pos.ballots.length === 0) {
+                    // No points
+                    const winnerCands = manual
+                        .map((id) => posCandidates.find((c) => c.id === id))
+                        .filter(Boolean) as typeof posCandidates;
+                    pos.winners = winnerCands.map((cand, idx) => ({
+                        id: cand.id,
+                        name: cand.name,
+                        ranking: idx + 1,
+                        total_points: 0,
+                        borda_points: bordaScores[cand.id] || 0,
+                        excluded: false,
+                    }));
+                    const sortedCandidates = [
+                        ...winnerCands,
+                        ...posCandidates
+                            .filter((c) => !manual.includes(c.id))
+                            .sort((a, b) => a.name.localeCompare(b.name)),
+                    ];
+                    pos.candidates = sortedCandidates.map((cand, idx: number) => ({
+                        id: cand.id,
+                        name: cand.name,
+                        ranking: idx + 1,
+                        total_points: 0,
+                        borda_points: bordaScores[cand.id] || 0,
+                        excluded: false,
+                    }));
+                    continue;
+                }
+                const candidateIds = posCandidates.map((c) => String(c.id));
+                const ballots = pos.ballots.map((ballot) =>
+                    ballot.filter((cid) => !excluded.includes(cid)).map((cid) => String(cid))
+                );
+                const { tallies } = hareclarkWithTallies(candidateIds, ballots, pos.vacancies);
+                // Manual winners
+                const winnerCands = manual
+                    .map((id) => posCandidates.find((c) => c.id === id))
+                    .filter(Boolean) as typeof posCandidates;
+                pos.winners = winnerCands.map((cand, idx) => ({
+                    id: cand.id,
+                    name: cand.name,
+                    ranking: idx + 1,
+                    total_points: tallies[cand.id] ?? 0,
+                    borda_points: bordaScores[cand.id] || 0,
+                    excluded: false,
+                }));
+                const sortedCandidates = [
+                    ...winnerCands,
+                    ...posCandidates
+                        .filter((c) => !manual.includes(c.id))
+                        .sort((a, b) => {
+                            // Sort by Hare-Clark tallies desc, then Borda desc, then name
+                            const hcDiff = (tallies[b.id] ?? 0) - (tallies[a.id] ?? 0);
+                            if (hcDiff !== 0) return hcDiff;
+                            const bordaDiff = (bordaScores[b.id] ?? 0) - (bordaScores[a.id] ?? 0);
+                            if (bordaDiff !== 0) return bordaDiff;
+                            return a.name.localeCompare(b.name);
+                        }),
+                ];
+                pos.candidates = sortedCandidates.map((cand, idx: number) => ({
+                    id: String(cand.id),
+                    name: cand.name,
+                    ranking: idx + 1,
+                    total_points: tallies[cand.id] ?? 0,
+                    borda_points: bordaScores[cand.id] || 0,
+                    excluded: false,
+                }));
+                // @ts-expect-error: attach for debug only
+                pos.hareclarkTallies = tallies;
+                continue;
+            }
+            if (pos.ballots.length === 0) {
+                // Elect top vacancies candidates as winners
+                const elected = posCandidatesFiltered.slice(0, pos.vacancies);
+                pos.winners = elected.map((cand, idx) => ({
+                    id: cand.id,
+                    name: cand.name,
+                    ranking: idx + 1,
+                    total_points: 0,
+                    borda_points: bordaScores[cand.id] || 0,
+                    excluded: false,
+                }));
+                pos.candidates = posCandidates.map((c, idx) => ({
+                    id: c.id,
+                    name: c.name,
+                    ranking: idx + 1,
+                    total_points: 0,
+                    borda_points: bordaScores[c.id] || 0,
+                    excluded: excluded.includes(c.id),
+                }));
+                continue;
+            }
+            const candidateIds = posCandidatesFiltered.map((c) => String(c.id));
             const ballots = pos.ballots.map((ballot) =>
                 ballot.filter((cid) => !excluded.includes(cid)).map((cid) => String(cid))
             );
@@ -263,8 +399,11 @@ export async function POST(req: NextRequest) {
                 ...posCandidates
                     .filter((c) => !winnerSet.has(String(c.id)))
                     .sort((a, b) => {
-                        const diff = (tallies[b.id] ?? 0) - (tallies[a.id] ?? 0);
-                        if (diff !== 0) return diff;
+                        // Sort by Hare-Clark tallies desc, then Borda desc, then name
+                        const hcDiff = (tallies[b.id] ?? 0) - (tallies[a.id] ?? 0);
+                        if (hcDiff !== 0) return hcDiff;
+                        const bordaDiff = (bordaScores[b.id] ?? 0) - (bordaScores[a.id] ?? 0);
+                        if (bordaDiff !== 0) return bordaDiff;
                         return a.name.localeCompare(b.name);
                     }),
             ];
@@ -272,19 +411,25 @@ export async function POST(req: NextRequest) {
                 id: String(cand.id),
                 name: cand.name,
                 ranking: idx + 1,
-                preferences_count: 0,
                 total_points: tallies[cand.id] ?? 0,
+                borda_points: bordaScores[cand.id] || 0,
+                excluded: false,
             }));
-            pos.winners = elected.map((cid: string, idx: number) => {
-                const cidStr = String(cid);
-                const cand = posCandidates.find((c) => String(c.id) === cidStr);
-                return {
-                    id: cand ? String(cand.id) : cidStr,
-                    name: cand ? cand.name : cidStr,
-                    ranking: pos.candidates.find((c) => c.id === cidStr)?.ranking ?? idx + 1,
-                    preferences_count: 0,
-                };
-            });
+            let numWinners = Math.min(pos.vacancies, elected.length);
+            if (numWinners < pos.vacancies) {
+                const remaining = sortedCandidates
+                    .slice(numWinners)
+                    .filter((c) => !winnerSet.has(String(c.id)));
+                numWinners += Math.min(remaining.length, pos.vacancies - numWinners);
+            }
+            pos.winners = sortedCandidates.slice(0, numWinners).map((cand, idx) => ({
+                id: String(cand.id),
+                name: cand.name,
+                ranking: idx + 1,
+                total_points: tallies[cand.id] ?? 0,
+                borda_points: bordaScores[cand.id] || 0,
+                excluded: false,
+            }));
             // @ts-expect-error: attach for debug only
             pos.hareclarkTallies = tallies;
         }
@@ -294,7 +439,7 @@ export async function POST(req: NextRequest) {
     let changed = true;
     let maxLoops = 10; // prevent infinite loop
     while (changed && maxLoops-- > 0) {
-        runAllHareClark(grouped, exclusions);
+        runAllHareClark(grouped, exclusions, manualOverrides);
         // Find candidates who are winners in multiple positions
         const winnerMap: Record<string, string[]> = {};
         for (const pos of Object.values(grouped)) {
@@ -319,10 +464,10 @@ export async function POST(req: NextRequest) {
         }
     }
 
-    // Remove vacancies, ballots, candidateIds from output
+    // Remove ballots, candidateIds from output
     const results: ResultPosition[] = Object.values(grouped).map(
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        ({ vacancies, ballots, candidateIds, ...rest }) => rest
+        ({ ballots, candidateIds, ...rest }) => rest
     );
     return NextResponse.json({ results }, { status: 200 });
 }
