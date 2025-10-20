@@ -1,5 +1,6 @@
 'use client';
 
+import { Button, Card, CardBody, CardHeader } from '@heroui/react';
 import { useEffect, useMemo, useState } from 'react';
 import useSWR from 'swr';
 
@@ -309,302 +310,327 @@ export default function Results({ electionId }: ResultsProps) {
             {results.length === 0 && !isValidating && <p>No results found.</p>}
 
             {multiWinners.length > 0 && !finalised && (
-                <div className="mb-6 p-4 border rounded bg-yellow-50 dark:bg-yellow-900/30 dark:border-yellow-700/50">
-                    <h2 className="text-lg font-semibold mb-2">Multiple Position Winners</h2>
-                    <p className="mb-2">
-                        The following candidates have won more than one position. Please select
-                        which position each will accept:
-                    </p>
-                    {multiWinners.map((mw) => {
-                        const options = [
-                            ...mw.positions.map((pid, idx) => {
-                                const pos = results.find((p) => p.position_id === pid);
-                                const tempSelections = { ...winnerSelections, [mw.id]: pid };
-                                const projWinners = pos
-                                    ? pos.winners.filter((w) => {
-                                          const mw2 = multiWinners.find((m) => m.id === w.id);
-                                          if (mw2) {
-                                              return tempSelections[w.id] === pos.position_id;
-                                          }
-                                          return true;
-                                      })
-                                    : [];
-                                const isOverCapacity = pos && projWinners.length > pos.vacancies;
-                                const isAtCapacity =
-                                    pos &&
-                                    projWinners.length >= pos.vacancies &&
-                                    !projWinners.some((w) => w.id === mw.id);
-                                const label = isOverCapacity
-                                    ? `${mw.positionNames[idx]} (Full)`
-                                    : isAtCapacity
-                                      ? `${mw.positionNames[idx]} (At Capacity)`
-                                      : mw.positionNames[idx];
-                                return { pid, label, disabled: isOverCapacity };
-                            }),
-                            ...mw.soloCandidatePositions.map((pid, idx) => ({
-                                pid,
-                                label: `${mw.soloCandidatePositionNames[idx]} (Only Candidate)`,
-                                disabled: false,
-                            })),
-                        ];
-                        return (
-                            <div key={mw.id} className="mb-2">
-                                <span className="font-bold">{mw.name}</span>:
-                                <select
-                                    className="ml-2 border rounded p-1"
-                                    value={winnerSelections[mw.id] || ''}
-                                    onChange={(e) =>
-                                        setWinnerSelections((prev) => ({
-                                            ...prev,
-                                            [mw.id]: e.target.value,
-                                        }))
-                                    }
-                                >
-                                    <option value="">Select position</option>
-                                    {options.map((opt) => (
-                                        <option
-                                            key={opt.pid}
-                                            value={opt.pid}
-                                            disabled={opt.disabled}
-                                        >
-                                            {opt.label}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                        );
-                    })}
-                    <button
-                        className="mt-2 px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
-                        disabled={multiWinners.some((mw) => !winnerSelections[mw.id])}
-                        onClick={handleConfirmSelections}
-                    >
-                        Confirm Selections
-                    </button>
-                </div>
+                <Card className="mb-6 bg-gray-200 dark:bg-gray-800">
+                    <CardHeader>
+                        <h2 className="text-lg font-semibold">Multiple Position Winners</h2>
+                    </CardHeader>
+                    <CardBody>
+                        <p className="mb-2">
+                            The following candidates have won more than one position. Please select
+                            which position each will accept:
+                        </p>
+                        {multiWinners.map((mw) => {
+                            const options = [
+                                ...mw.positions.map((pid, idx) => {
+                                    const pos = results.find((p) => p.position_id === pid);
+                                    const tempSelections = { ...winnerSelections, [mw.id]: pid };
+                                    const projWinners = pos
+                                        ? pos.winners.filter((w) => {
+                                              const mw2 = multiWinners.find((m) => m.id === w.id);
+                                              if (mw2) {
+                                                  return tempSelections[w.id] === pos.position_id;
+                                              }
+                                              return true;
+                                          })
+                                        : [];
+                                    const isOverCapacity = pos && projWinners.length > pos.vacancies;
+                                    const isAtCapacity =
+                                        pos &&
+                                        projWinners.length >= pos.vacancies &&
+                                        !projWinners.some((w) => w.id === mw.id);
+                                    const label = isOverCapacity
+                                        ? `${mw.positionNames[idx]} (Full)`
+                                        : isAtCapacity
+                                          ? `${mw.positionNames[idx]} (At Capacity)`
+                                          : mw.positionNames[idx];
+                                    return { pid, label, disabled: isOverCapacity };
+                                }),
+                                ...mw.soloCandidatePositions.map((pid, idx) => ({
+                                    pid,
+                                    label: `${mw.soloCandidatePositionNames[idx]} (Only Candidate)`,
+                                    disabled: false,
+                                })),
+                            ];
+                            return (
+                                <div key={mw.id} className="mb-2">
+                                    <span className="font-bold">{mw.name}</span>:
+                                    <select
+                                        className="ml-2 rounded p-1 bg-gray-50 dark:bg-gray-700 dark:border-gray-600"
+                                        value={winnerSelections[mw.id] || ''}
+                                        onChange={(e) =>
+                                            setWinnerSelections((prev) => ({
+                                                ...prev,
+                                                [mw.id]: e.target.value,
+                                            }))
+                                        }
+                                    >
+                                        <option value="">Select position</option>
+                                        {options.map((opt) => (
+                                            <option
+                                                key={opt.pid}
+                                                value={opt.pid}
+                                                disabled={opt.disabled}
+                                            >
+                                                {opt.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            );
+                        })}
+                        <Button
+                            className="mt-2"
+                            color="primary"
+                            isDisabled={multiWinners.some((mw) => !winnerSelections[mw.id])}
+                            onPress={handleConfirmSelections}
+                        >
+                            Confirm Selections
+                        </Button>
+                    </CardBody>
+                </Card>
             )}
 
             {allWarnings.length > 0 && (
-                <div className="mb-6 p-4 border rounded bg-red-50 dark:bg-red-900/30 dark:border-red-700/50">
-                    <h2 className="text-lg font-semibold mb-2 text-red-600 dark:text-red-400">
-                        Warnings
-                    </h2>
-                    <ul className="list-disc pl-5">
-                        {allWarnings.map((warning, idx) => (
-                            <li key={idx} className="text-red-700 dark:text-red-300">
-                                {warning}
-                            </li>
-                        ))}
-                    </ul>
-                </div>
+                <Card className="mb-6 border-red-200 dark:border-red-800 bg-gray-200 dark:bg-gray-800">
+                    <CardHeader>
+                        <h2 className="text-lg font-semibold text-red-600 dark:text-red-400">
+                            Warnings
+                        </h2>
+                    </CardHeader>
+                    <CardBody>
+                        <ul className="list-disc pl-5">
+                            {allWarnings.map((warning, idx) => (
+                                <li key={idx} className="text-red-700 dark:text-red-300">
+                                    {warning}
+                                </li>
+                            ))}
+                        </ul>
+                    </CardBody>
+                </Card>
             )}
 
             {sortedResults.map((position) => {
                 return (
-                    <div
-                        key={position.position_id}
-                        className="mb-6 rounded-lg border p-4 shadow-md dark:bg-gray-900 dark:border-gray-700"
-                    >
-                        <h2 className="text-xl font-semibold dark:text-white">
-                            {position.position_name}
-                        </h2>
-
-                        <h3
-                            className={`mt-2 font-medium ${position.winners.length !== position.vacancies ? 'text-orange-600 dark:text-orange-400' : 'text-green-600 dark:text-green-400'}`}
-                        >
-                            Winner(s) ({position.winners.length}/{position.vacancies}):
-                        </h3>
-                        {position.winners.length > 0 ? (
-                            <ul className="list-disc pl-5">
-                                {position.winners.map((winner) => (
-                                    <li key={winner.id} className="font-semibold">
-                                        {winner.name || winner.id}
-                                    </li>
-                                ))}
-                            </ul>
-                        ) : (
-                            <div className="pl-5 italic text-gray-500">No winner(s)</div>
-                        )}
-                        {(() => {
-                            if (position.winners.length > position.vacancies) {
-                                return (
-                                    <div className="text-orange-600 dark:text-orange-400 mt-1">
-                                        (Tie occurred)
-                                    </div>
-                                );
-                            }
-                            return null;
-                        })()}
-
-                        <h3 className="mt-4 font-medium text-gray-700 dark:text-gray-200">
-                            All Candidates:
-                        </h3>
-                        <table className="mt-2 w-full border-collapse border border-gray-300 dark:border-gray-700">
-                            <thead>
-                                <tr className="bg-gray-200 dark:bg-gray-900">
-                                    <th className="border p-2">Ranking</th>
-                                    <th className="border p-2">Candidate</th>
-                                    <th className="border p-2">Hare-Clark Points</th>
-                                    <th className="border p-2">Borda Points</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {position.candidates
-                                    .sort((a, b) => {
-                                        if (b.total_points !== a.total_points) {
-                                            return b.total_points - a.total_points;
-                                        }
-                                        if (b.borda_points !== a.borda_points) {
-                                            return b.borda_points - a.borda_points;
-                                        }
-                                        return (a.name || a.id).localeCompare(b.name || b.id);
-                                    })
-                                    .map((candidate) => (
-                                        <tr key={candidate.id} className="text-center">
-                                            <td className="border p-2">{candidate.ranking}</td>
-                                            <td className="border p-2">
-                                                {candidate.name || candidate.id}
-                                            </td>
-                                            <td className="border p-2">
-                                                {typeof candidate.total_points === 'number'
-                                                    ? candidate.total_points
-                                                    : ''}
-                                            </td>
-                                            <td className="border p-2">
-                                                {typeof candidate.borda_points === 'number'
-                                                    ? candidate.borda_points
-                                                    : ''}
-                                            </td>
-                                        </tr>
-                                    ))}
-                            </tbody>
-                        </table>
-
-                        <div className="mt-4">
-                            <button
-                                className="px-4 py-2 bg-blue-600 text-white rounded"
-                                onClick={() =>
-                                    setManualOverrides((prev) => ({
-                                        ...prev,
-                                        [position.position_id]: prev[position.position_id] || [],
-                                    }))
-                                }
+                    <Card key={position.position_id} className="mb-6 bg-gray-200 dark:bg-gray-800">
+                        <CardHeader>
+                            <h2 className="text-xl font-semibold">{position.position_name}</h2>
+                        </CardHeader>
+                        <CardBody>
+                            <h3
+                                className={`font-medium ${
+                                    position.winners.length !== position.vacancies
+                                        ? 'text-orange-600 dark:text-orange-400'
+                                        : 'text-green-600 dark:text-green-400'
+                                }`}
                             >
-                                Manual Override
-                            </button>
-                            {manualOverrides[position.position_id] && (
-                                <div className="mt-2 p-4 border rounded">
-                                    <p>Select up to {position.vacancies} winners:</p>
-                                    {position.candidates.map((cand) => {
-                                        const winningPos = candidateWinningPositions[cand.id] || [];
-                                        const label =
-                                            winningPos.length > 0
-                                                ? `${cand.name || cand.id} (already winner for ${winningPos.join(
-                                                      ', '
-                                                  )})`
-                                                : cand.name || cand.id;
-                                        return (
-                                            <label key={cand.id} className="block">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={
-                                                        manualOverrides[
-                                                            position.position_id
-                                                        ]?.includes(cand.id) ?? false
-                                                    }
-                                                    onChange={(e) => {
-                                                        const selected =
-                                                            manualOverrides[position.position_id] ||
-                                                            [];
-                                                        if (e.target.checked) {
-                                                            if (
-                                                                selected.length < position.vacancies
-                                                            ) {
+                                Winner(s) ({position.winners.length}/{position.vacancies}):
+                            </h3>
+                            {position.winners.length > 0 ? (
+                                <ul className="list-disc pl-5">
+                                    {position.winners.map((winner) => (
+                                        <li key={winner.id} className="font-semibold">
+                                            {winner.name || winner.id}
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <div className="pl-5 italic text-gray-500">No winner(s)</div>
+                            )}
+                            {(() => {
+                                if (position.winners.length > position.vacancies) {
+                                    return (
+                                        <div className="text-orange-600 dark:text-orange-400 mt-1">
+                                            (Tie occurred)
+                                        </div>
+                                    );
+                                }
+                                return null;
+                            })()}
+
+                            <h3 className="mt-4 font-medium text-gray-700 dark:text-gray-200">
+                                All Candidates:
+                            </h3>
+                            <table className="mt-2 w-full border-collapse border border-gray-300 dark:border-gray-700">
+                                <thead>
+                                    <tr className="bg-primary">
+                                        <th className="border border-gray-300 dark:border-gray-700 p-2">
+                                            Ranking
+                                        </th>
+                                        <th className="border border-gray-300 dark:border-gray-700 p-2">
+                                            Candidate
+                                        </th>
+                                        <th className="border border-gray-300 dark:border-gray-700 p-2">
+                                            Hare-Clark Points
+                                        </th>
+                                        <th className="border border-gray-300 dark:border-gray-700 p-2">
+                                            Borda Points
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {position.candidates
+                                        .sort((a, b) => {
+                                            if (b.total_points !== a.total_points) {
+                                                return b.total_points - a.total_points;
+                                            }
+                                            if (b.borda_points !== a.borda_points) {
+                                                return b.borda_points - a.borda_points;
+                                            }
+                                            return (a.name || a.id).localeCompare(b.name || b.id);
+                                        })
+                                        .map((candidate) => (
+                                            <tr
+                                                key={candidate.id}
+                                                className="text-center bg-gray-50 dark:bg-gray-700"
+                                            >
+                                                <td className="border border-gray-300 dark:border-gray-700 p-2">
+                                                    {candidate.ranking}
+                                                </td>
+                                                <td className="border border-gray-300 dark:border-gray-700 p-2">
+                                                    {candidate.name || candidate.id}
+                                                </td>
+                                                <td className="border border-gray-300 dark:border-gray-700 p-2">
+                                                    {typeof candidate.total_points === 'number'
+                                                        ? candidate.total_points
+                                                        : ''}
+                                                </td>
+                                                <td className="border border-gray-300 dark:border-gray-700 p-2">
+                                                    {typeof candidate.borda_points === 'number'
+                                                        ? candidate.borda_points
+                                                        : ''}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                </tbody>
+                            </table>
+
+                            <div className="mt-4">
+                                <Button
+                                    color="primary"
+                                    size="sm"
+                                    onPress={() =>
+                                        setManualOverrides((prev) => ({
+                                            ...prev,
+                                            [position.position_id]: prev[position.position_id] || [],
+                                        }))
+                                    }
+                                >
+                                    Manual Override
+                                </Button>
+                                {manualOverrides[position.position_id] && (
+                                    <div className="mt-2 p-4 rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                                        <p>Select up to {position.vacancies} winners:</p>
+                                        {position.candidates.map((cand) => {
+                                            const winningPos = candidateWinningPositions[cand.id] || [];
+                                            const label =
+                                                winningPos.length > 0
+                                                    ? `${cand.name || cand.id} (already winner for ${winningPos.join(
+                                                          ', '
+                                                      )})`
+                                                    : cand.name || cand.id;
+                                            return (
+                                                <label key={cand.id} className="block">
+                                                    <input
+                                                        type="checkbox"
+                                                        className='mr-2'
+                                                        checked={
+                                                            manualOverrides[
+                                                                position.position_id
+                                                            ]?.includes(cand.id) ?? false
+                                                        }
+                                                        onChange={(e) => {
+                                                            const selected =
+                                                                manualOverrides[position.position_id] ||
+                                                                [];
+                                                            if (e.target.checked) {
+                                                                if (
+                                                                    selected.length < position.vacancies
+                                                                ) {
+                                                                    setManualOverrides((prev) => ({
+                                                                        ...prev,
+                                                                        [position.position_id]: [
+                                                                            ...selected,
+                                                                            cand.id,
+                                                                        ],
+                                                                    }));
+                                                                }
+                                                            } else {
                                                                 setManualOverrides((prev) => ({
                                                                     ...prev,
-                                                                    [position.position_id]: [
-                                                                        ...selected,
-                                                                        cand.id,
-                                                                    ],
+                                                                    [position.position_id]:
+                                                                        selected.filter(
+                                                                            (id) => id !== cand.id
+                                                                        ),
                                                                 }));
                                                             }
-                                                        } else {
-                                                            setManualOverrides((prev) => ({
-                                                                ...prev,
-                                                                [position.position_id]:
-                                                                    selected.filter(
-                                                                        (id) => id !== cand.id
-                                                                    ),
-                                                            }));
-                                                        }
-                                                    }}
-                                                />
-                                                {label}
-                                            </label>
-                                        );
-                                    })}
-                                    <button
-                                        className="mt-2 px-4 py-2 bg-green-600 text-white rounded"
-                                        onClick={async () => {
-                                            // Build exclusions for manually overridden candidates to ensure only 1 position per person
-                                            const additionalExclusions: Record<string, string[]> =
-                                                {};
-                                            for (const [posId, winners] of Object.entries(
-                                                manualOverrides
-                                            )) {
-                                                for (const winnerId of winners) {
-                                                    for (const otherPos of results) {
-                                                        if (otherPos.position_id !== posId) {
-                                                            if (
-                                                                !additionalExclusions[
-                                                                    otherPos.position_id
-                                                                ]
-                                                            ) {
+                                                        }}
+                                                    />
+                                                    {label}
+                                                </label>
+                                            );
+                                        })}
+                                        <Button
+                                            className="mt-2"
+                                            color="primary"
+                                            size="sm"
+                                            onPress={async () => {
+                                                // Build exclusions for manually overridden candidates to ensure only 1 position per person
+                                                const additionalExclusions: Record<string, string[]> =
+                                                    {};
+                                                for (const [posId, winners] of Object.entries(
+                                                    manualOverrides
+                                                )) {
+                                                    for (const winnerId of winners) {
+                                                        for (const otherPos of results) {
+                                                            if (otherPos.position_id !== posId) {
+                                                                if (
+                                                                    !additionalExclusions[
+                                                                        otherPos.position_id
+                                                                    ]
+                                                                ) {
+                                                                    additionalExclusions[
+                                                                        otherPos.position_id
+                                                                    ] = [];
+                                                                }
                                                                 additionalExclusions[
                                                                     otherPos.position_id
-                                                                ] = [];
+                                                                ].push(winnerId);
                                                             }
-                                                            additionalExclusions[
-                                                                otherPos.position_id
-                                                            ].push(winnerId);
                                                         }
                                                     }
                                                 }
-                                            }
-                                            const allExclusions = {
-                                                ...exclusions,
-                                                ...additionalExclusions,
-                                            };
-                                            const apiUrl = `results/${electionId}`;
-                                            const resp = (await fetcher.post.query([
-                                                apiUrl,
-                                                {
-                                                    json: {
-                                                        manualOverrides,
-                                                        exclusions: allExclusions,
+                                                const allExclusions = {
+                                                    ...exclusions,
+                                                    ...additionalExclusions,
+                                                };
+                                                const apiUrl = `results/${electionId}`;
+                                                const resp = (await fetcher.post.query([
+                                                    apiUrl,
+                                                    {
+                                                        json: {
+                                                            manualOverrides,
+                                                            exclusions: allExclusions,
+                                                        },
                                                     },
-                                                },
-                                            ])) as ApiResult;
-                                            setResults(resp.results);
-                                            setExclusions(allExclusions); // Update exclusions to include manual ones
-                                        }}
-                                    >
-                                        Apply Manual Winners
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </div>
+                                                ])) as ApiResult;
+                                                setResults(resp.results);
+                                                setExclusions(allExclusions); // Update exclusions to include manual ones
+                                            }}
+                                        >
+                                            Apply Manual Winners
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
+                        </CardBody>
+                    </Card>
                 );
             })}
 
             <div className="mt-8 text-center">
-                <button
-                    className="px-6 py-3 bg-orange-400 text-white rounded-lg hover:bg-orange-500 transition-colors"
-                    onClick={exportToCSV}
-                >
+                <Button color="primary" onPress={exportToCSV}>
                     Export Results to CSV
-                </button>
+                </Button>
             </div>
         </div>
     );
