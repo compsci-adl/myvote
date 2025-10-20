@@ -6,7 +6,6 @@ import { useEffect, useState } from 'react';
 import useSWRMutation from 'swr/mutation';
 
 import { fetcher } from '../lib/fetcher';
-
 import { usePositions } from './usePositions';
 
 interface Position {
@@ -38,8 +37,13 @@ export default function ClosedNominations({ electionId, setSliderValue }: Closed
                 const existing = map.get(nom.name)!;
                 const existingRoles = existing.roles.split(', ').filter((r) => r);
                 const newRoles = nom.roles.split(', ').filter((r) => r);
-                const combinedRoles = Array.from(new Set([...existingRoles, ...newRoles])).join(', ');
-                const combinedStatement = existing.statement === nom.statement ? nom.statement : [existing.statement, nom.statement].filter((s) => s).join('\n\n');
+                const combinedRoles = Array.from(new Set([...existingRoles, ...newRoles])).join(
+                    ', '
+                );
+                const combinedStatement =
+                    existing.statement === nom.statement
+                        ? nom.statement
+                        : [existing.statement, nom.statement].filter((s) => s).join('\n\n');
                 map.set(nom.name, {
                     name: nom.name,
                     roles: combinedRoles,
@@ -70,14 +74,23 @@ export default function ClosedNominations({ electionId, setSliderValue }: Closed
                             'First Name' in row &&
                             'Last Name' in row &&
                             'What committee positions are you nominating for?' in row &&
-                            'Tell us a bit about yourself and why you are nominating for a committee position!' in row
+                            'Tell us a bit about yourself and why you are nominating for a committee position!' in
+                                row
                         ) {
                             const rowData = row as Record<string, string>;
                             const firstName = rowData['First Name'];
                             const lastName = rowData['Last Name'];
-                            const rolesRaw = rowData['What committee positions are you nominating for?'];
-                            const roles = rolesRaw.split(',').map(r => r.trim().replace(/\s*\*$/, '')).filter(r => r).join(', ');
-                            const statement = rowData['Tell us a bit about yourself and why you are nominating for a committee position!'];
+                            const rolesRaw =
+                                rowData['What committee positions are you nominating for?'];
+                            const roles = rolesRaw
+                                .split(',')
+                                .map((r) => r.trim().replace(/\s*\*$/, ''))
+                                .filter((r) => r)
+                                .join(', ');
+                            const statement =
+                                rowData[
+                                    'Tell us a bit about yourself and why you are nominating for a committee position!'
+                                ];
                             return {
                                 name: `${firstName} ${lastName}`,
                                 statement: statement,
@@ -117,14 +130,23 @@ export default function ClosedNominations({ electionId, setSliderValue }: Closed
                             'First Name' in row &&
                             'Last Name' in row &&
                             'What executive positions are you nominating for?' in row &&
-                            'Tell us a bit about yourself and why you are nominating for an executive committee position!' in row
+                            'Tell us a bit about yourself and why you are nominating for an executive committee position!' in
+                                row
                         ) {
                             const rowData = row as Record<string, string>;
                             const firstName = rowData['First Name'];
                             const lastName = rowData['Last Name'];
-                            const rolesRaw = rowData['What executive positions are you nominating for?'];
-                            const roles = rolesRaw.split(',').map(r => r.trim().replace(/\s*\*$/, '')).filter(r => r).join(', ');
-                            const statement = rowData['Tell us a bit about yourself and why you are nominating for an executive committee position!'];
+                            const rolesRaw =
+                                rowData['What executive positions are you nominating for?'];
+                            const roles = rolesRaw
+                                .split(',')
+                                .map((r) => r.trim().replace(/\s*\*$/, ''))
+                                .filter((r) => r)
+                                .join(', ');
+                            const statement =
+                                rowData[
+                                    'Tell us a bit about yourself and why you are nominating for an executive committee position!'
+                                ];
                             return {
                                 name: `${firstName} ${lastName}`,
                                 statement: statement,
@@ -173,7 +195,9 @@ export default function ClosedNominations({ electionId, setSliderValue }: Closed
     const handleContinue = async () => {
         setStatus({ text: '', type: '' });
         // Client-side validation: ensure every candidate has at least one nomination
-        const invalidCandidates = mergedNominations.filter((n) => !n.roles || n.roles.trim() === '');
+        const invalidCandidates = mergedNominations.filter(
+            (n) => !n.roles || n.roles.trim() === ''
+        );
         if (invalidCandidates.length > 0) {
             setStatus({
                 text: 'All candidates must have at least one nomination/role before continuing.',

@@ -478,13 +478,14 @@ export default function Results({ electionId }: ResultsProps) {
                                                 <input
                                                     type="checkbox"
                                                     checked={
-                                                        manualOverrides[position.position_id]?.includes(
-                                                            cand.id
-                                                        ) ?? false
+                                                        manualOverrides[
+                                                            position.position_id
+                                                        ]?.includes(cand.id) ?? false
                                                     }
                                                     onChange={(e) => {
                                                         const selected =
-                                                            manualOverrides[position.position_id] || [];
+                                                            manualOverrides[position.position_id] ||
+                                                            [];
                                                         if (e.target.checked) {
                                                             if (
                                                                 selected.length < position.vacancies
@@ -516,7 +517,8 @@ export default function Results({ electionId }: ResultsProps) {
                                         className="mt-2 px-4 py-2 bg-green-600 text-white rounded"
                                         onClick={async () => {
                                             // Build exclusions for manually overridden candidates to ensure only 1 position per person
-                                            const additionalExclusions: Record<string, string[]> = {};
+                                            const additionalExclusions: Record<string, string[]> =
+                                                {};
                                             for (const [posId, winners] of Object.entries(
                                                 manualOverrides
                                             )) {

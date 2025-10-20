@@ -80,7 +80,13 @@ export default function PositionsPage() {
                     <Accordion className="w-full max-w-4xl">
                         {Object.values(positions)
                             .sort((a, b) => {
-                                const execOrder = ['President', 'Vice-President', 'Treasurer', 'Secretary', 'Partnerships & Sponsorships Manager'];
+                                const execOrder = [
+                                    'President',
+                                    'Vice-President',
+                                    'Treasurer',
+                                    'Secretary',
+                                    'Partnerships & Sponsorships Manager',
+                                ];
                                 const aIndex = execOrder.indexOf(a.name);
                                 const bIndex = execOrder.indexOf(b.name);
                                 if (a.executive && b.executive) {

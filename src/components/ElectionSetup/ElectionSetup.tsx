@@ -3,6 +3,7 @@
 import { Button } from '@heroui/react';
 import { useState } from 'react';
 import useSWRMutation from 'swr/mutation';
+
 import type { Election } from '@/types/election';
 
 import { fetcher } from '../../lib/fetcher';
