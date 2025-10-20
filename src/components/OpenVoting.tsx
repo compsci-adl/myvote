@@ -7,7 +7,7 @@ import useSWRMutation from 'swr/mutation';
 import { fetcher } from '../lib/fetcher';
 
 interface OpenVotingProps {
-    electionId: number;
+    electionId: string;
     setSliderValue: React.Dispatch<React.SetStateAction<number>>;
 }
 

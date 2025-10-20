@@ -49,7 +49,7 @@ export default function AdminPage() {
                 .then((data) => {
                     if (data) {
                         setSelectedElection({
-                            id: Number(data.id),
+                            id: data.id,
                             name: data.name,
                             status: data.status as ElectionStatus,
                         });

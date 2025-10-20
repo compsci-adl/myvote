@@ -15,7 +15,7 @@ interface Position {
 }
 
 interface ClosedNominationsProps {
-    electionId: number;
+    electionId: string;
     setSliderValue: React.Dispatch<React.SetStateAction<number>>;
 }
 

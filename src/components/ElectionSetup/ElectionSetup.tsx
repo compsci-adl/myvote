@@ -3,8 +3,7 @@
 import { Button } from '@heroui/react';
 import { useState } from 'react';
 import useSWRMutation from 'swr/mutation';
-
-import { ElectionStatus } from '@/db/schema';
+import type { Election } from '@/types/election';
 
 import { fetcher } from '../../lib/fetcher';
 import ElectionInfo from './ElectionInfo';
@@ -13,13 +12,7 @@ import { electionSchema } from './schemas';
 
 interface ElectionSetupProps {
     setSliderValue: (value: number) => void;
-    setSelectedElection: React.Dispatch<
-        React.SetStateAction<{
-            id: number;
-            name: string;
-            status: ElectionStatus;
-        } | null>
-    >;
+    setSelectedElection: React.Dispatch<React.SetStateAction<Election | null>>;
 }
 
 const ElectionSetup = ({ setSliderValue, setSelectedElection }: ElectionSetupProps) => {
@@ -61,10 +54,10 @@ const ElectionSetup = ({ setSliderValue, setSelectedElection }: ElectionSetupPro
         },
         onSuccess: async (resp) => {
             setStatus({ text: 'Election created successfully!', type: 'success' });
-            setSelectedElection(resp as { id: number; name: string; status: ElectionStatus });
+            setSelectedElection(resp as Election);
             // POST each position to /api/positions
             for (const pos of positions) {
-                await fetcher.post.mutate(`/positions?election_id=${(resp as { id: number }).id}`, {
+                await fetcher.post.mutate(`/positions?election_id=${(resp as Election).id}`, {
                     arg: pos,
                 });
             }

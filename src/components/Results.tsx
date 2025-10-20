@@ -6,7 +6,7 @@ import useSWR from 'swr';
 import { fetcher } from '../lib/fetcher';
 
 interface ResultsProps {
-    electionId: number;
+    electionId: string;
 }
 
 interface Candidate {

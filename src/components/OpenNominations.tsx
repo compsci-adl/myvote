@@ -9,7 +9,7 @@ import { useMount } from '@/hooks/use-mount';
 import { fetcher } from '../lib/fetcher';
 
 interface OpenNominationsProps {
-    electionId: number;
+    electionId: string;
     setSliderValue: React.Dispatch<React.SetStateAction<number>>;
 }
 
