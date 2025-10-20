@@ -214,6 +214,36 @@ export default function Results({ electionId }: ResultsProps) {
         return map;
     }, [results]);
 
+    // Export results to CSV
+    const exportToCSV = () => {
+        const csvRows: string[][] = [];
+        csvRows.push(['Position', 'Candidate', 'Is Winner', 'Hare-Clark Points', 'Borda Points']);
+        for (const pos of results) {
+            const winnerIds = new Set(pos.winners.map((w) => w.id));
+            for (const cand of pos.candidates) {
+                csvRows.push([
+                    pos.position_name,
+                    cand.name || cand.id,
+                    winnerIds.has(cand.id) ? 'Yes' : 'No',
+                    cand.total_points.toString(),
+                    cand.borda_points.toString(),
+                ]);
+            }
+        }
+        const csvContent = csvRows
+            .map((row) => row.map((field) => `"${field.replace(/"/g, '""')}"`).join(','))
+            .join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'election_results.csv';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
     // Sort positions: exec first in specific order, then managers alphabetically, then others alphabetically
     const sortedResults = useMemo(() => {
         const execOrder = [
@@ -567,6 +597,15 @@ export default function Results({ electionId }: ResultsProps) {
                     </div>
                 );
             })}
+
+            <div className="mt-8 text-center">
+                <button
+                    className="px-6 py-3 bg-orange-400 text-white rounded-lg hover:bg-orange-500 transition-colors"
+                    onClick={exportToCSV}
+                >
+                    Export Results to CSV
+                </button>
+            </div>
         </div>
     );
 }
