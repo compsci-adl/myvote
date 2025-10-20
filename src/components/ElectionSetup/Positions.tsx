@@ -69,22 +69,6 @@ export default function Positions({
             return;
         }
         const reader = new FileReader();
-        // Simple sanitisation function to escape HTML special characters
-        function sanitise(str: string) {
-            const map: Record<string, string> = {
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                "'": '&#39;',
-                '"': '&quot;',
-                '`': '&#96;',
-            };
-            let clean = str;
-            if (clean.startsWith('"') && clean.endsWith('"')) {
-                clean = clean.slice(1, -1);
-            }
-            return clean.replace(/[&<>'"`]/g, (c) => map[c] ?? c);
-        }
         reader.onload = (event) => {
             try {
                 const text = event.target?.result as string;
@@ -118,9 +102,9 @@ export default function Positions({
                         }
                     }
                     return {
-                        name: sanitise(cols[nameIdx]?.trim() || ''),
+                        name: cols[nameIdx]?.trim() || '',
                         vacancies: parseInt(cols[vacanciesIdx] || '1', 10) || 1,
-                        description: sanitise(cols[descriptionIdx]?.trim() || ''),
+                        description: cols[descriptionIdx]?.trim() || '',
                         executive: executiveVal,
                     };
                 });

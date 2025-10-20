@@ -2,7 +2,7 @@
 
 import { Button, Input } from '@heroui/react';
 import Papa from 'papaparse';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import useSWRMutation from 'swr/mutation';
 
 import { fetcher } from '../lib/fetcher';
@@ -26,55 +26,115 @@ interface Nomination {
 }
 
 export default function ClosedNominations({ electionId, setSliderValue }: ClosedNominationsProps) {
-    const [nominations, setNominations] = useState<Nomination[]>([]);
+    const [nonExecNominations, setNonExecNominations] = useState<Nomination[]>([]);
+    const [execNominations, setExecNominations] = useState<Nomination[]>([]);
+    const [mergedNominations, setMergedNominations] = useState<Nomination[]>([]);
     const [status, setStatus] = useState({ text: '', type: '' });
 
-    function handleFileUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    useEffect(() => {
+        const map = new Map<string, Nomination>();
+        [...nonExecNominations, ...execNominations].forEach((nom) => {
+            if (map.has(nom.name)) {
+                const existing = map.get(nom.name)!;
+                const existingRoles = existing.roles.split(', ').filter((r) => r);
+                const newRoles = nom.roles.split(', ').filter((r) => r);
+                const combinedRoles = Array.from(new Set([...existingRoles, ...newRoles])).join(', ');
+                const combinedStatement = existing.statement === nom.statement ? nom.statement : [existing.statement, nom.statement].filter((s) => s).join('\n\n');
+                map.set(nom.name, {
+                    name: nom.name,
+                    roles: combinedRoles,
+                    statement: combinedStatement,
+                });
+            } else {
+                map.set(nom.name, nom);
+            }
+        });
+        setMergedNominations(Array.from(map.values()));
+    }, [nonExecNominations, execNominations]);
+
+    function handleNonExecUpload(event: React.ChangeEvent<HTMLInputElement>) {
         const file = event.target?.files?.[0];
         if (!file) {
             console.error('No file selected');
             return;
         }
 
-        // Simple sanitisation function to escape HTML special characters
-        function sanitise(str: string) {
-            // Remove surrounding quotes if present
-            let clean = str;
-            if (clean.startsWith('"') && clean.endsWith('"')) {
-                clean = clean.slice(1, -1);
-            }
-            // Escape HTML special characters
-            const map: Record<string, string> = {
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                "'": '&#39;',
-                '"': '&quot;',
-                '`': '&#96;',
-            };
-            return clean.replace(/[&<>'"`]/g, (c) => map[c] ?? c);
+        Papa.parse(file, {
+            header: true,
+            complete: (results: { data: unknown[] }) => {
+                const parsedNominations = results.data
+                    .map((row) => {
+                        if (
+                            typeof row === 'object' &&
+                            row !== null &&
+                            'First Name' in row &&
+                            'Last Name' in row &&
+                            'What committee positions are you nominating for?' in row &&
+                            'Tell us a bit about yourself and why you are nominating for a committee position!' in row
+                        ) {
+                            const rowData = row as Record<string, string>;
+                            const firstName = rowData['First Name'];
+                            const lastName = rowData['Last Name'];
+                            const rolesRaw = rowData['What committee positions are you nominating for?'];
+                            const roles = rolesRaw.split(',').map(r => r.trim().replace(/\s*\*$/, '')).filter(r => r).join(', ');
+                            const statement = rowData['Tell us a bit about yourself and why you are nominating for a committee position!'];
+                            return {
+                                name: `${firstName} ${lastName}`,
+                                statement: statement,
+                                roles: roles,
+                            };
+                        }
+                        return null;
+                    })
+                    .filter((n): n is Nomination => n !== null);
+                setNonExecNominations(parsedNominations);
+            },
+            error: (error: unknown) => {
+                if (error instanceof Error) {
+                    console.error('Error parsing CSV:', error.message);
+                } else {
+                    console.error('Error parsing CSV:', error);
+                }
+            },
+        });
+    }
+
+    function handleExecUpload(event: React.ChangeEvent<HTMLInputElement>) {
+        const file = event.target?.files?.[0];
+        if (!file) {
+            console.error('No file selected');
+            return;
         }
 
         Papa.parse(file, {
             header: true,
             complete: (results: { data: unknown[] }) => {
-                const parsedNominations = results.data.map((row) => {
-                    if (
-                        typeof row === 'object' &&
-                        row !== null &&
-                        'Name' in row &&
-                        'Statement' in row &&
-                        'Roles' in row
-                    ) {
-                        return {
-                            name: sanitise((row as { Name: string }).Name),
-                            statement: sanitise((row as { Statement: string }).Statement),
-                            roles: sanitise((row as { Roles: string }).Roles),
-                        };
-                    }
-                    return { name: '', statement: '', roles: '' };
-                });
-                setNominations(parsedNominations);
+                const parsedNominations = results.data
+                    .map((row) => {
+                        if (
+                            typeof row === 'object' &&
+                            row !== null &&
+                            'First Name' in row &&
+                            'Last Name' in row &&
+                            'What executive positions are you nominating for?' in row &&
+                            'Tell us a bit about yourself and why you are nominating for an executive committee position!' in row
+                        ) {
+                            const rowData = row as Record<string, string>;
+                            const firstName = rowData['First Name'];
+                            const lastName = rowData['Last Name'];
+                            const rolesRaw = rowData['What executive positions are you nominating for?'];
+                            const roles = rolesRaw.split(',').map(r => r.trim().replace(/\s*\*$/, '')).filter(r => r).join(', ');
+                            const statement = rowData['Tell us a bit about yourself and why you are nominating for an executive committee position!'];
+                            return {
+                                name: `${firstName} ${lastName}`,
+                                statement: statement,
+                                roles: roles,
+                            };
+                        }
+                        return null;
+                    })
+                    .filter((n): n is Nomination => n !== null);
+                setExecNominations(parsedNominations);
             },
             error: (error: unknown) => {
                 if (error instanceof Error) {
@@ -113,7 +173,7 @@ export default function ClosedNominations({ electionId, setSliderValue }: Closed
     const handleContinue = async () => {
         setStatus({ text: '', type: '' });
         // Client-side validation: ensure every candidate has at least one nomination
-        const invalidCandidates = nominations.filter((n) => !n.roles || n.roles.trim() === '');
+        const invalidCandidates = mergedNominations.filter((n) => !n.roles || n.roles.trim() === '');
         if (invalidCandidates.length > 0) {
             setStatus({
                 text: 'All candidates must have at least one nomination/role before continuing.',
@@ -123,7 +183,7 @@ export default function ClosedNominations({ electionId, setSliderValue }: Closed
         }
 
         // Transform nominations: parse roles into nominations array
-        const candidatesWithNominations = nominations.map((n) => ({
+        const candidatesWithNominations = mergedNominations.map((n) => ({
             ...n,
             nominations: n.roles
                 ? n.roles
@@ -222,22 +282,30 @@ export default function ClosedNominations({ electionId, setSliderValue }: Closed
     return (
         <div className="mt-8">
             <h1>
-                Once the Google Forms is closed, please download the file as a CSV file and upload
-                it here. Once uploaded, check the displayed nominations to see if there are any
-                errors. If there are no issues, continue to the next stage.
+                Once the Google Forms are closed, please download the non-exec and exec nomination
+                files as CSV files and upload them here. Once uploaded, check the displayed
+                nominations to see if there are any errors. If there are no issues, continue to the
+                next stage.
             </h1>
-            <Input
-                type="file"
-                label="Upload CSV"
-                accept=".csv"
-                className="mt-4"
-                onChange={handleFileUpload}
-            />
-            {nominations.length > 0 && (
+            <div className="mt-4 flex gap-4">
+                <Input
+                    type="file"
+                    label="Upload Non-Exec CSV"
+                    accept=".csv"
+                    onChange={handleNonExecUpload}
+                />
+                <Input
+                    type="file"
+                    label="Upload Exec CSV"
+                    accept=".csv"
+                    onChange={handleExecUpload}
+                />
+            </div>
+            {mergedNominations.length > 0 && (
                 <h2 className="mt-6 text-center text-xl font-semibold">Nominations</h2>
             )}
             <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-                {nominations.map((nomination, index) => (
+                {mergedNominations.map((nomination, index) => (
                     <div
                         key={index}
                         className="flex flex-col gap-4 rounded-xl bg-gray-200 dark:bg-gray-900 p-4"
@@ -249,7 +317,10 @@ export default function ClosedNominations({ electionId, setSliderValue }: Closed
                             <strong>Roles:</strong> {nomination.roles}
                         </p>
                         <p>
-                            <strong>Statement:</strong> {nomination.statement}
+                            <strong>Statement:</strong>
+                        </p>
+                        <p className="whitespace-pre-line">
+                            {nomination.statement.replace(/^-\s*/gm, '• ')}
                         </p>
                     </div>
                 ))}
