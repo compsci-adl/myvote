@@ -15,6 +15,7 @@ interface Candidate {
     ranking: number;
     total_points: number;
     borda_points: number;
+    excluded: boolean;
 }
 
 interface Winner {
@@ -33,7 +34,7 @@ interface Position {
 export default function Results({ electionId }: ResultsProps) {
     const [results, setResults] = useState<Position[]>([]);
     const [winnerSelections, setWinnerSelections] = useState<Record<string, string>>({}); // candidateId -> positionId
-    const [finalized, setFinalized] = useState(false);
+    const [finalised, setFinalised] = useState(false);
     const [warnings, setWarnings] = useState<string[]>([]);
     const [manualOverrides, setManualOverrides] = useState<Record<string, string[]>>({});
     const [exclusions, setExclusions] = useState<Record<string, string[]>>({});
@@ -47,7 +48,9 @@ export default function Results({ electionId }: ResultsProps) {
 
     // Always update results when data changes
     useEffect(() => {
-        if (data && data.results) setResults(data.results);
+        if (data && data.results) {
+            setResults(data.results);
+        }
     }, [data]);
 
     // Find candidates who are winners in multiple positions
@@ -97,9 +100,44 @@ export default function Results({ electionId }: ResultsProps) {
     // If results change, and there are still multiple-position winners, reset finalised state
     useEffect(() => {
         if (multiWinners.length > 0) {
-            setFinalized(false);
+            setFinalised(false);
         }
     }, [multiWinners.length]);
+
+    // Auto-select if only one available option for multi-winners
+    useEffect(() => {
+        let hasChanges = false;
+        const newSelections = { ...winnerSelections };
+        for (const mw of multiWinners) {
+            if (newSelections[mw.id]) continue;
+            const options = [
+                ...mw.positions.map((pid) => {
+                    const pos = results.find((p) => p.position_id === pid);
+                    const tempSelections = { ...winnerSelections, [mw.id]: pid };
+                    const projWinners = pos
+                        ? pos.winners.filter((w) => {
+                              const mw2 = multiWinners.find((m) => m.id === w.id);
+                              if (mw2) {
+                                  return tempSelections[w.id] === pos.position_id;
+                              }
+                              return true;
+                          })
+                        : [];
+                    const isOverCapacity = pos && projWinners.length > pos.vacancies;
+                    return { pid, disabled: isOverCapacity };
+                }),
+                ...mw.soloCandidatePositions.map((pid) => ({ pid, disabled: false })),
+            ];
+            const availableOptions = options.filter((o) => !o.disabled);
+            if (availableOptions.length === 1) {
+                newSelections[mw.id] = availableOptions[0].pid;
+                hasChanges = true;
+            }
+        }
+        if (hasChanges) {
+            setWinnerSelections(newSelections);
+        }
+    }, [multiWinners, results, winnerSelections]);
 
     // Compute warnings for unfilled roles
     useEffect(() => {
@@ -131,7 +169,10 @@ export default function Results({ electionId }: ResultsProps) {
                     ...pos.winners.filter((w) => !excluded.includes(w.id)),
                     ...manual.map((id) => ({ id, name: '' })), // dummy winner object
                 ];
-                if (finalWinners.length < pos.vacancies) {
+                if (
+                    finalWinners.length < pos.vacancies &&
+                    pos.candidates.filter((c) => !excluded.includes(c.id)).length === 0
+                ) {
                     newWarnings.push(
                         `${pos.position_name} would have ${finalWinners.length} winner(s) but needs ${pos.vacancies}`
                     );
@@ -160,6 +201,46 @@ export default function Results({ electionId }: ResultsProps) {
     const allWarnings = useMemo(() => {
         return [...warnings, ...unfilledWarnings];
     }, [warnings, unfilledWarnings]);
+
+    // Map of candidate ID to their winning position names
+    const candidateWinningPositions = useMemo(() => {
+        const map: Record<string, string[]> = {};
+        for (const pos of results) {
+            for (const winner of pos.winners) {
+                if (!map[winner.id]) map[winner.id] = [];
+                map[winner.id].push(pos.position_name);
+            }
+        }
+        return map;
+    }, [results]);
+
+    // Sort positions: exec first in specific order, then managers alphabetically, then others alphabetically
+    const sortedResults = useMemo(() => {
+        const execOrder = [
+            'President',
+            'Vice-President',
+            'Treasurer',
+            'Secretary',
+            'Partnerships & Sponsorships Manager',
+        ];
+        return [...results].sort((a, b) => {
+            const aIsExec = execOrder.includes(a.position_name);
+            const bIsExec = execOrder.includes(b.position_name);
+            if (aIsExec && bIsExec) {
+                return execOrder.indexOf(a.position_name) - execOrder.indexOf(b.position_name);
+            }
+            if (aIsExec) return -1;
+            if (bIsExec) return 1;
+            const aIsManager = a.position_name.includes('Manager');
+            const bIsManager = b.position_name.includes('Manager');
+            if (aIsManager && bIsManager) {
+                return a.position_name.localeCompare(b.position_name);
+            }
+            if (aIsManager) return -1;
+            if (bIsManager) return 1;
+            return a.position_name.localeCompare(b.position_name);
+        });
+    }, [results]);
 
     // Remove a candidate from all but the selected position and re-run results
     const handleConfirmSelections = async () => {
@@ -197,66 +278,72 @@ export default function Results({ electionId }: ResultsProps) {
 
             {results.length === 0 && !isValidating && <p>No results found.</p>}
 
-            {multiWinners.length > 0 && !finalized && (
+            {multiWinners.length > 0 && !finalised && (
                 <div className="mb-6 p-4 border rounded bg-yellow-50 dark:bg-yellow-900/30 dark:border-yellow-700/50">
                     <h2 className="text-lg font-semibold mb-2">Multiple Position Winners</h2>
                     <p className="mb-2">
                         The following candidates have won more than one position. Please select
                         which position each will accept:
                     </p>
-                    {multiWinners.map((mw) => (
-                        <div key={mw.id} className="mb-2">
-                            <span className="font-bold">{mw.name}</span>:
-                            <select
-                                className="ml-2 border rounded p-1"
-                                value={winnerSelections[mw.id] || ''}
-                                onChange={(e) =>
-                                    setWinnerSelections((prev) => ({
-                                        ...prev,
-                                        [mw.id]: e.target.value,
-                                    }))
-                                }
-                            >
-                                <option value="">Select position</option>
-                                {mw.positions.map((pid, idx) => {
-                                    const pos = results.find((p) => p.position_id === pid);
-                                    const tempSelections = { ...winnerSelections, [mw.id]: pid };
-                                    const projWinners = pos
-                                        ? pos.winners.filter((w) => {
-                                              const mw2 = multiWinners.find((m) => m.id === w.id);
-                                              if (mw2) {
-                                                  return tempSelections[w.id] === pos.position_id;
-                                              }
-                                              return true;
-                                          })
-                                        : [];
-                                    const isOverCapacity =
-                                        pos && projWinners.length > pos.vacancies;
-                                    const isAtCapacity =
-                                        pos &&
-                                        projWinners.length >= pos.vacancies &&
-                                        !projWinners.some((w) => w.id === mw.id);
-                                    const label = isOverCapacity
-                                        ? '(Full)'
-                                        : isAtCapacity
-                                          ? '(At Capacity)'
-                                          : '';
-                                    return (
-                                        <option key={pid} value={pid} disabled={isOverCapacity}>
-                                            {`${mw.positionNames[idx]} ${label}`}
+                    {multiWinners.map((mw) => {
+                        const options = [
+                            ...mw.positions.map((pid, idx) => {
+                                const pos = results.find((p) => p.position_id === pid);
+                                const tempSelections = { ...winnerSelections, [mw.id]: pid };
+                                const projWinners = pos
+                                    ? pos.winners.filter((w) => {
+                                          const mw2 = multiWinners.find((m) => m.id === w.id);
+                                          if (mw2) {
+                                              return tempSelections[w.id] === pos.position_id;
+                                          }
+                                          return true;
+                                      })
+                                    : [];
+                                const isOverCapacity = pos && projWinners.length > pos.vacancies;
+                                const isAtCapacity =
+                                    pos &&
+                                    projWinners.length >= pos.vacancies &&
+                                    !projWinners.some((w) => w.id === mw.id);
+                                const label = isOverCapacity
+                                    ? `${mw.positionNames[idx]} (Full)`
+                                    : isAtCapacity
+                                      ? `${mw.positionNames[idx]} (At Capacity)`
+                                      : mw.positionNames[idx];
+                                return { pid, label, disabled: isOverCapacity };
+                            }),
+                            ...mw.soloCandidatePositions.map((pid, idx) => ({
+                                pid,
+                                label: `${mw.soloCandidatePositionNames[idx]} (Only Candidate)`,
+                                disabled: false,
+                            })),
+                        ];
+                        return (
+                            <div key={mw.id} className="mb-2">
+                                <span className="font-bold">{mw.name}</span>:
+                                <select
+                                    className="ml-2 border rounded p-1"
+                                    value={winnerSelections[mw.id] || ''}
+                                    onChange={(e) =>
+                                        setWinnerSelections((prev) => ({
+                                            ...prev,
+                                            [mw.id]: e.target.value,
+                                        }))
+                                    }
+                                >
+                                    <option value="">Select position</option>
+                                    {options.map((opt) => (
+                                        <option
+                                            key={opt.pid}
+                                            value={opt.pid}
+                                            disabled={opt.disabled}
+                                        >
+                                            {opt.label}
                                         </option>
-                                    );
-                                })}
-                                {mw.soloCandidatePositions.map((pid, idx) => {
-                                    return (
-                                        <option key={pid} value={pid}>
-                                            {`${mw.soloCandidatePositionNames[idx]} (Only Candidate)`}
-                                        </option>
-                                    );
-                                })}
-                            </select>
-                        </div>
-                    ))}
+                                    ))}
+                                </select>
+                            </div>
+                        );
+                    })}
                     <button
                         className="mt-2 px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
                         disabled={multiWinners.some((mw) => !winnerSelections[mw.id])}
@@ -270,7 +357,7 @@ export default function Results({ electionId }: ResultsProps) {
             {allWarnings.length > 0 && (
                 <div className="mb-6 p-4 border rounded bg-red-50 dark:bg-red-900/30 dark:border-red-700/50">
                     <h2 className="text-lg font-semibold mb-2 text-red-600 dark:text-red-400">
-                        Warning: Unfilled Roles
+                        Warnings
                     </h2>
                     <ul className="list-disc pl-5">
                         {allWarnings.map((warning, idx) => (
@@ -282,7 +369,7 @@ export default function Results({ electionId }: ResultsProps) {
                 </div>
             )}
 
-            {results.map((position) => {
+            {sortedResults.map((position) => {
                 return (
                     <div
                         key={position.position_id}
@@ -292,8 +379,10 @@ export default function Results({ electionId }: ResultsProps) {
                             {position.position_name}
                         </h2>
 
-                        <h3 className="mt-2 font-medium text-green-600 dark:text-green-400">
-                            Winner(s):
+                        <h3
+                            className={`mt-2 font-medium ${position.winners.length !== position.vacancies ? 'text-orange-600 dark:text-orange-400' : 'text-green-600 dark:text-green-400'}`}
+                        >
+                            Winner(s) ({position.winners.length}/{position.vacancies}):
                         </h3>
                         {position.winners.length > 0 ? (
                             <ul className="list-disc pl-5">
@@ -306,6 +395,16 @@ export default function Results({ electionId }: ResultsProps) {
                         ) : (
                             <div className="pl-5 italic text-gray-500">No winner(s)</div>
                         )}
+                        {(() => {
+                            if (position.winners.length > position.vacancies) {
+                                return (
+                                    <div className="text-orange-600 dark:text-orange-400 mt-1">
+                                        (Tie occurred)
+                                    </div>
+                                );
+                            }
+                            return null;
+                        })()}
 
                         <h3 className="mt-4 font-medium text-gray-700 dark:text-gray-200">
                             All Candidates:
@@ -321,7 +420,15 @@ export default function Results({ electionId }: ResultsProps) {
                             </thead>
                             <tbody>
                                 {position.candidates
-                                    .sort((a, b) => a.ranking - b.ranking)
+                                    .sort((a, b) => {
+                                        if (b.total_points !== a.total_points) {
+                                            return b.total_points - a.total_points;
+                                        }
+                                        if (b.borda_points !== a.borda_points) {
+                                            return b.borda_points - a.borda_points;
+                                        }
+                                        return (a.name || a.id).localeCompare(b.name || b.id);
+                                    })
                                     .map((candidate) => (
                                         <tr key={candidate.id} className="text-center">
                                             <td className="border p-2">{candidate.ranking}</td>
@@ -358,51 +465,96 @@ export default function Results({ electionId }: ResultsProps) {
                             {manualOverrides[position.position_id] && (
                                 <div className="mt-2 p-4 border rounded">
                                     <p>Select up to {position.vacancies} winners:</p>
-                                    {position.candidates.map((cand) => (
-                                        <label key={cand.id} className="block">
-                                            <input
-                                                type="checkbox"
-                                                checked={
-                                                    manualOverrides[position.position_id]?.includes(
-                                                        cand.id
-                                                    ) ?? false
-                                                }
-                                                onChange={(e) => {
-                                                    const selected =
-                                                        manualOverrides[position.position_id] || [];
-                                                    if (e.target.checked) {
-                                                        if (selected.length < position.vacancies) {
+                                    {position.candidates.map((cand) => {
+                                        const winningPos = candidateWinningPositions[cand.id] || [];
+                                        const label =
+                                            winningPos.length > 0
+                                                ? `${cand.name || cand.id} (already winner for ${winningPos.join(
+                                                      ', '
+                                                  )})`
+                                                : cand.name || cand.id;
+                                        return (
+                                            <label key={cand.id} className="block">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={
+                                                        manualOverrides[position.position_id]?.includes(
+                                                            cand.id
+                                                        ) ?? false
+                                                    }
+                                                    onChange={(e) => {
+                                                        const selected =
+                                                            manualOverrides[position.position_id] || [];
+                                                        if (e.target.checked) {
+                                                            if (
+                                                                selected.length < position.vacancies
+                                                            ) {
+                                                                setManualOverrides((prev) => ({
+                                                                    ...prev,
+                                                                    [position.position_id]: [
+                                                                        ...selected,
+                                                                        cand.id,
+                                                                    ],
+                                                                }));
+                                                            }
+                                                        } else {
                                                             setManualOverrides((prev) => ({
                                                                 ...prev,
-                                                                [position.position_id]: [
-                                                                    ...selected,
-                                                                    cand.id,
-                                                                ],
+                                                                [position.position_id]:
+                                                                    selected.filter(
+                                                                        (id) => id !== cand.id
+                                                                    ),
                                                             }));
                                                         }
-                                                    } else {
-                                                        setManualOverrides((prev) => ({
-                                                            ...prev,
-                                                            [position.position_id]: selected.filter(
-                                                                (id) => id !== cand.id
-                                                            ),
-                                                        }));
-                                                    }
-                                                }}
-                                            />
-                                            {cand.name || cand.id}
-                                        </label>
-                                    ))}
+                                                    }}
+                                                />
+                                                {label}
+                                            </label>
+                                        );
+                                    })}
                                     <button
                                         className="mt-2 px-4 py-2 bg-green-600 text-white rounded"
                                         onClick={async () => {
+                                            // Build exclusions for manually overridden candidates to ensure only 1 position per person
+                                            const additionalExclusions: Record<string, string[]> = {};
+                                            for (const [posId, winners] of Object.entries(
+                                                manualOverrides
+                                            )) {
+                                                for (const winnerId of winners) {
+                                                    for (const otherPos of results) {
+                                                        if (otherPos.position_id !== posId) {
+                                                            if (
+                                                                !additionalExclusions[
+                                                                    otherPos.position_id
+                                                                ]
+                                                            ) {
+                                                                additionalExclusions[
+                                                                    otherPos.position_id
+                                                                ] = [];
+                                                            }
+                                                            additionalExclusions[
+                                                                otherPos.position_id
+                                                            ].push(winnerId);
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            const allExclusions = {
+                                                ...exclusions,
+                                                ...additionalExclusions,
+                                            };
                                             const apiUrl = `results/${electionId}`;
                                             const resp = (await fetcher.post.query([
                                                 apiUrl,
-                                                { json: { manualOverrides, exclusions } },
+                                                {
+                                                    json: {
+                                                        manualOverrides,
+                                                        exclusions: allExclusions,
+                                                    },
+                                                },
                                             ])) as ApiResult;
                                             setResults(resp.results);
-                                            setManualOverrides({});
+                                            setExclusions(allExclusions); // Update exclusions to include manual ones
                                         }}
                                     >
                                         Apply Manual Winners
