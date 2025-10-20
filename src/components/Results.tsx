@@ -35,6 +35,8 @@ export default function Results({ electionId }: ResultsProps) {
     const [winnerSelections, setWinnerSelections] = useState<Record<string, string>>({}); // candidateId -> positionId
     const [finalized, setFinalized] = useState(false);
     const [warnings, setWarnings] = useState<string[]>([]);
+    const [manualOverrides, setManualOverrides] = useState<Record<string, string[]>>({});
+    const [exclusions, setExclusions] = useState<Record<string, string[]>>({});
 
     // Fetch election results
     type ApiResult = { results: Position[] };
@@ -112,6 +114,24 @@ export default function Results({ electionId }: ResultsProps) {
         }
     }, [winnerSelections, multiWinners, results]);
 
+    // Compute unfilled roles warnings
+    const unfilledWarnings = useMemo(() => {
+        const warns: string[] = [];
+        for (const pos of results) {
+            if (pos.winners.length < pos.vacancies) {
+                warns.push(
+                    `${pos.position_name} has ${pos.winners.length} winner(s) but needs ${pos.vacancies}`
+                );
+            }
+        }
+        return warns;
+    }, [results]);
+
+    // Combined warnings
+    const allWarnings = useMemo(() => {
+        return [...warnings, ...unfilledWarnings];
+    }, [warnings, unfilledWarnings]);
+
     // Remove a candidate from all but the selected position and re-run results
     const handleConfirmSelections = async () => {
         // Build a map of exclusions: for each position, which candidate(s) to exclude
@@ -125,6 +145,7 @@ export default function Results({ electionId }: ResultsProps) {
                 }
             }
         }
+        setExclusions(exclusions);
         const apiUrl = `results/${electionId}`;
         const resp = (await fetcher.post.query([apiUrl, { json: { exclusions } }])) as ApiResult;
         setResults(resp.results);
@@ -170,7 +191,8 @@ export default function Results({ electionId }: ResultsProps) {
                                               return true;
                                           })
                                         : [];
-                                    const isOverCapacity = pos && projWinners.length > pos.vacancies;
+                                    const isOverCapacity =
+                                        pos && projWinners.length > pos.vacancies;
                                     const isAtCapacity =
                                         pos &&
                                         projWinners.length >= pos.vacancies &&
@@ -199,13 +221,13 @@ export default function Results({ electionId }: ResultsProps) {
                 </div>
             )}
 
-            {warnings.length > 0 && (
+            {allWarnings.length > 0 && (
                 <div className="mb-6 p-4 border rounded bg-red-50 dark:bg-red-900/30 dark:border-red-700/50">
                     <h2 className="text-lg font-semibold mb-2 text-red-600 dark:text-red-400">
                         Warning: Unfilled Roles
                     </h2>
                     <ul className="list-disc pl-5">
-                        {warnings.map((warning, idx) => (
+                        {allWarnings.map((warning, idx) => (
                             <li key={idx} className="text-red-700 dark:text-red-300">
                                 {warning}
                             </li>
@@ -274,6 +296,74 @@ export default function Results({ electionId }: ResultsProps) {
                                     ))}
                             </tbody>
                         </table>
+
+                        <div className="mt-4">
+                            <button
+                                className="px-4 py-2 bg-blue-600 text-white rounded"
+                                onClick={() =>
+                                    setManualOverrides((prev) => ({
+                                        ...prev,
+                                        [position.position_id]: prev[position.position_id] || [],
+                                    }))
+                                }
+                            >
+                                Manual Override
+                            </button>
+                            {manualOverrides[position.position_id] && (
+                                <div className="mt-2 p-4 border rounded">
+                                    <p>Select up to {position.vacancies} winners:</p>
+                                    {position.candidates.map((cand) => (
+                                        <label key={cand.id} className="block">
+                                            <input
+                                                type="checkbox"
+                                                checked={
+                                                    manualOverrides[position.position_id]?.includes(
+                                                        cand.id
+                                                    ) ?? false
+                                                }
+                                                onChange={(e) => {
+                                                    const selected =
+                                                        manualOverrides[position.position_id] || [];
+                                                    if (e.target.checked) {
+                                                        if (selected.length < position.vacancies) {
+                                                            setManualOverrides((prev) => ({
+                                                                ...prev,
+                                                                [position.position_id]: [
+                                                                    ...selected,
+                                                                    cand.id,
+                                                                ],
+                                                            }));
+                                                        }
+                                                    } else {
+                                                        setManualOverrides((prev) => ({
+                                                            ...prev,
+                                                            [position.position_id]: selected.filter(
+                                                                (id) => id !== cand.id
+                                                            ),
+                                                        }));
+                                                    }
+                                                }}
+                                            />
+                                            {cand.name || cand.id}
+                                        </label>
+                                    ))}
+                                    <button
+                                        className="mt-2 px-4 py-2 bg-green-600 text-white rounded"
+                                        onClick={async () => {
+                                            const apiUrl = `results/${electionId}`;
+                                            const resp = (await fetcher.post.query([
+                                                apiUrl,
+                                                { json: { manualOverrides, exclusions } },
+                                            ])) as ApiResult;
+                                            setResults(resp.results);
+                                            setManualOverrides({});
+                                        }}
+                                    >
+                                        Apply Manual Winners
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 );
             })}

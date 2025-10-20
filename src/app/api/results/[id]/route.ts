@@ -200,6 +200,7 @@ export async function POST(req: NextRequest) {
     }
     const body = await req.json();
     const exclusions: Record<string, string[]> = body.exclusions || {};
+    const manualOverrides: Record<string, string[]> = body.manualOverrides || {};
 
     // Get all ballots for this election, joined with positions
     const data = await db
@@ -251,7 +252,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Helper to run Hare-Clark for all positions with current exclusions
-    function runAllHareClark(groupedObj: typeof grouped, exclusionsObj: Record<string, string[]>) {
+    function runAllHareClark(
+        groupedObj: typeof grouped,
+        exclusionsObj: Record<string, string[]>,
+        manualOverridesObj: Record<string, string[]>
+    ) {
         for (const pos of Object.values(groupedObj)) {
             let posCandidates = allCandidates.filter((cand) => pos.candidateIds.includes(cand.id));
             const excluded = exclusionsObj[pos.position_id] || [];
@@ -259,6 +264,85 @@ export async function POST(req: NextRequest) {
             if (posCandidates.length === 0) {
                 pos.winners = [];
                 pos.candidates = [];
+                continue;
+            }
+            const manual = manualOverridesObj[pos.position_id];
+            if (manual && manual.length > 0) {
+                // Manual override: still compute points, but set winners manually
+                if (pos.ballots.length === 0) {
+                    // No points
+                    const winnerCands = manual
+                        .map((id) => posCandidates.find((c) => c.id === id))
+                        .filter(Boolean) as typeof posCandidates;
+                    pos.winners = winnerCands.map((cand, idx) => ({
+                        id: cand.id,
+                        name: cand.name,
+                        ranking: idx + 1,
+                        preferences_count: 0,
+                        borda_points: 0,
+                    }));
+                    const sortedCandidates = [
+                        ...winnerCands,
+                        ...posCandidates
+                            .filter((c) => !manual.includes(c.id))
+                            .sort((a, b) => a.name.localeCompare(b.name)),
+                    ];
+                    pos.candidates = sortedCandidates.map((cand, idx: number) => ({
+                        id: cand.id,
+                        name: cand.name,
+                        ranking: idx + 1,
+                        preferences_count: 0,
+                        total_points: 0,
+                        borda_points: 0,
+                    }));
+                    continue;
+                }
+                const candidateIds = posCandidates.map((c) => String(c.id));
+                const ballots = pos.ballots.map((ballot) =>
+                    ballot.filter((cid) => !excluded.includes(cid)).map((cid) => String(cid))
+                );
+                const { tallies } = hareclarkWithTallies(candidateIds, ballots, pos.vacancies);
+                const bordaScores: Record<string, number> = {};
+                for (const ballot of pos.ballots) {
+                    for (let i = 0; i < ballot.length; i++) {
+                        const cid = ballot[i];
+                        bordaScores[cid] = (bordaScores[cid] || 0) + (ballot.length - i);
+                    }
+                }
+                // Manual winners
+                const winnerCands = manual
+                    .map((id) => posCandidates.find((c) => c.id === id))
+                    .filter(Boolean) as typeof posCandidates;
+                pos.winners = winnerCands.map((cand, idx) => ({
+                    id: cand.id,
+                    name: cand.name,
+                    ranking: idx + 1,
+                    preferences_count: 0,
+                    borda_points: bordaScores[cand.id] || 0,
+                }));
+                const sortedCandidates = [
+                    ...winnerCands,
+                    ...posCandidates
+                        .filter((c) => !manual.includes(c.id))
+                        .sort((a, b) => {
+                            // Sort by Hare-Clark tallies desc, then Borda desc, then name
+                            const hcDiff = (tallies[b.id] ?? 0) - (tallies[a.id] ?? 0);
+                            if (hcDiff !== 0) return hcDiff;
+                            const bordaDiff = (bordaScores[b.id] ?? 0) - (bordaScores[a.id] ?? 0);
+                            if (bordaDiff !== 0) return bordaDiff;
+                            return a.name.localeCompare(b.name);
+                        }),
+                ];
+                pos.candidates = sortedCandidates.map((cand, idx: number) => ({
+                    id: String(cand.id),
+                    name: cand.name,
+                    ranking: idx + 1,
+                    preferences_count: 0,
+                    total_points: tallies[cand.id] ?? 0,
+                    borda_points: bordaScores[cand.id] || 0,
+                }));
+                // @ts-expect-error: attach for debug only
+                pos.hareclarkTallies = tallies;
                 continue;
             }
             if (pos.ballots.length === 0) {
@@ -339,7 +423,7 @@ export async function POST(req: NextRequest) {
     let changed = true;
     let maxLoops = 10; // prevent infinite loop
     while (changed && maxLoops-- > 0) {
-        runAllHareClark(grouped, exclusions);
+        runAllHareClark(grouped, exclusions, manualOverrides);
         // Find candidates who are winners in multiple positions
         const winnerMap: Record<string, string[]> = {};
         for (const pos of Object.values(grouped)) {
