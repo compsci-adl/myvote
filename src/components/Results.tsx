@@ -54,24 +54,43 @@ export default function Results({ electionId }: ResultsProps) {
     const multiWinners = useMemo(() => {
         const winnerMap: Record<
             string,
-            { name: string; positions: string[]; positionNames: string[] }
+            {
+                name: string;
+                positions: string[];
+                positionNames: string[];
+                soloCandidatePositions: string[];
+                soloCandidatePositionNames: string[];
+            }
         > = {};
         for (const pos of results) {
             for (const winner of pos.winners) {
                 if (!winnerMap[winner.id]) {
-                    winnerMap[winner.id] = { name: winner.name, positions: [], positionNames: [] };
+                    winnerMap[winner.id] = {
+                        name: winner.name,
+                        positions: [],
+                        positionNames: [],
+                        soloCandidatePositions: [],
+                        soloCandidatePositionNames: [],
+                    };
                 }
-                winnerMap[winner.id].positions.push(pos.position_id);
-                winnerMap[winner.id].positionNames.push(pos.position_name);
+                if (pos.candidates.length === 1) {
+                    winnerMap[winner.id].soloCandidatePositions.push(pos.position_id);
+                    winnerMap[winner.id].soloCandidatePositionNames.push(pos.position_name);
+                } else {
+                    winnerMap[winner.id].positions.push(pos.position_id);
+                    winnerMap[winner.id].positionNames.push(pos.position_name);
+                }
             }
         }
         return Object.entries(winnerMap)
-            .filter(([, v]) => v.positions.length > 1)
+            .filter(([, v]) => v.positions.length + v.soloCandidatePositions.length > 1)
             .map(([id, v]) => ({
                 id,
                 name: v.name,
                 positions: v.positions,
                 positionNames: v.positionNames,
+                soloCandidatePositions: v.soloCandidatePositions,
+                soloCandidatePositionNames: v.soloCandidatePositionNames,
             }));
     }, [results]);
 
@@ -89,8 +108,14 @@ export default function Results({ electionId }: ResultsProps) {
             multiWinners.length > 0
         ) {
             const exclusions: Record<string, string[]> = {};
+            const manualOverrides: Record<string, string[]> = {};
             for (const mw of multiWinners) {
                 const keepPos = winnerSelections[mw.id];
+                const isSolo = mw.soloCandidatePositions.includes(keepPos);
+                if (isSolo) {
+                    if (!manualOverrides[keepPos]) manualOverrides[keepPos] = [];
+                    manualOverrides[keepPos].push(mw.id);
+                }
                 for (const pos of results) {
                     if (pos.position_id !== keepPos) {
                         if (!exclusions[pos.position_id]) exclusions[pos.position_id] = [];
@@ -101,7 +126,11 @@ export default function Results({ electionId }: ResultsProps) {
             const newWarnings: string[] = [];
             for (const pos of results) {
                 const excluded = exclusions[pos.position_id] || [];
-                const finalWinners = pos.winners.filter((w) => !excluded.includes(w.id));
+                const manual = manualOverrides[pos.position_id] || [];
+                const finalWinners = [
+                    ...pos.winners.filter((w) => !excluded.includes(w.id)),
+                    ...manual.map((id) => ({ id, name: '' })), // dummy winner object
+                ];
                 if (finalWinners.length < pos.vacancies) {
                     newWarnings.push(
                         `${pos.position_name} would have ${finalWinners.length} winner(s) but needs ${pos.vacancies}`
@@ -136,8 +165,15 @@ export default function Results({ electionId }: ResultsProps) {
     const handleConfirmSelections = async () => {
         // Build a map of exclusions: for each position, which candidate(s) to exclude
         const exclusions: Record<string, string[]> = {};
+        const manualOverrides: Record<string, string[]> = {};
         for (const mw of multiWinners) {
             const keepPos = winnerSelections[mw.id];
+            const isSolo = mw.soloCandidatePositions.includes(keepPos);
+            if (isSolo) {
+                // For solo candidate positions, set as manual winner
+                if (!manualOverrides[keepPos]) manualOverrides[keepPos] = [];
+                manualOverrides[keepPos].push(mw.id);
+            }
             for (const pos of results) {
                 if (pos.position_id !== keepPos) {
                     if (!exclusions[pos.position_id]) exclusions[pos.position_id] = [];
@@ -147,7 +183,10 @@ export default function Results({ electionId }: ResultsProps) {
         }
         setExclusions(exclusions);
         const apiUrl = `results/${electionId}`;
-        const resp = (await fetcher.post.query([apiUrl, { json: { exclusions } }])) as ApiResult;
+        const resp = (await fetcher.post.query([
+            apiUrl,
+            { json: { exclusions, manualOverrides } },
+        ])) as ApiResult;
         setResults(resp.results);
         setWinnerSelections({}); // Reset selections for next round if needed
     };
@@ -205,6 +244,13 @@ export default function Results({ electionId }: ResultsProps) {
                                     return (
                                         <option key={pid} value={pid} disabled={isOverCapacity}>
                                             {`${mw.positionNames[idx]} ${label}`}
+                                        </option>
+                                    );
+                                })}
+                                {mw.soloCandidatePositions.map((pid, idx) => {
+                                    return (
+                                        <option key={pid} value={pid}>
+                                            {`${mw.soloCandidatePositionNames[idx]} (Only Candidate)`}
                                         </option>
                                     );
                                 })}
