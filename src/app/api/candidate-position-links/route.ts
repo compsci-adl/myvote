@@ -38,7 +38,11 @@ export async function GET(req: NextRequest) {
         for (const link of links) {
             if (!link.candidate_id) continue;
             const candidate = await db
-                .select()
+                .select({
+                    id: candidates.id,
+                    name: candidates.name,
+                    statement: candidates.statement,
+                })
                 .from(candidates)
                 .where(eq(candidates.id, String(link.candidate_id)));
             if (candidate && candidate.length > 0) {
@@ -48,6 +52,7 @@ export async function GET(req: NextRequest) {
                     candidate: {
                         id: candidate[0].id,
                         name: candidate[0].name,
+                        statement: candidate[0].statement,
                     },
                 });
             }
@@ -100,15 +105,23 @@ export async function POST(req: NextRequest) {
         let candidatesList: unknown[] = [];
         if (candidateIds.length > 0) {
             candidatesList = await db
-                .select()
+                .select({
+                    id: candidates.id,
+                    name: candidates.name,
+                    statement: candidates.statement,
+                })
                 .from(candidates)
                 .where(inArray(candidates.id, candidateIds));
         }
         // Map candidates by id for quick lookup
         const candidateMap = new Map<string, Record<string, unknown>>();
         for (const cand of candidatesList) {
-            const candidate = cand as { id: string; name: string };
-            candidateMap.set(String(candidate.id), { id: candidate.id, name: candidate.name });
+            const candidate = cand as { id: string; name: string; statement: string };
+            candidateMap.set(String(candidate.id), {
+                id: candidate.id,
+                name: candidate.name,
+                statement: candidate.statement,
+            });
         }
 
         // Build response

@@ -189,13 +189,15 @@ export default function CandidatesPage() {
                                             )
                                         }
                                     >
-                                        <p
+                                        <div
                                             ref={(el) => {
                                                 if (el) r.current.set(c.id, el);
                                             }}
                                         >
-                                            {c.statement}
-                                        </p>
+                                            <p className="whitespace-pre-line">
+                                                {c.statement.replace(/^-\s*/gm, '• ')}
+                                            </p>
+                                        </div>
                                     </AccordionItem>
                                 );
                             })}
