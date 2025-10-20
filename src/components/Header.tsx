@@ -35,7 +35,6 @@ export const Header = () => {
     const pathname = usePathname();
     const openHelpModal = useHelpModal((s) => s.open);
 
-    // Handle hydration
     useEffect(() => {
         setMounted(true);
     }, []);
@@ -114,15 +113,19 @@ export const Header = () => {
                     </NavbarItem>
                     <NavbarItem>
                         <Tooltip content="Send Feedback" size="sm">
-                            <Button
-                                {...HEADER_BUTTON_PROPS}
-                                as="a"
-                                href={env.NEXT_PUBLIC_FEEDBACK_FORM_URL}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                            >
-                                🗣️
-                            </Button>
+                            {mounted ? (
+                                <Button
+                                    {...HEADER_BUTTON_PROPS}
+                                    as="a"
+                                    href={env.NEXT_PUBLIC_FEEDBACK_FORM_URL}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    🗣️
+                                </Button>
+                            ) : (
+                                <Button {...HEADER_BUTTON_PROPS}>🗣️</Button>
+                            )}
                         </Tooltip>
                     </NavbarItem>
                     <NavbarItem>
