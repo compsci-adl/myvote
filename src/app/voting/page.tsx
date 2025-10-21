@@ -242,9 +242,12 @@ export default function VotingPage() {
             setCandidatesLoading(true);
             try {
                 const posIds = positions.map((p) => p.id);
-                const data = (await fetcher.post.mutate('/candidate-position-links', {
-                    arg: { position_ids: posIds },
-                })) as CandidatePositionLinksResponse;
+                const data = (await fetcher.get.query([
+                    'candidate-position-links',
+                    {
+                        searchParams: { position_ids: posIds.join(',') },
+                    },
+                ])) as CandidatePositionLinksResponse;
                 const grouped: Record<string, Candidate[]> = {};
                 if (
                     data &&

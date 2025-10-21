@@ -7,7 +7,7 @@ import { candidatePositionLinks, candidates } from '@/db/schema';
 import { isMember } from '@/utils/is-member';
 
 export async function GET(req: NextRequest) {
-    // Expect /api/candidate-position-links?position_id=...
+    // Expect /api/candidate-position-links?position_id=... or ?position_ids=p1,p2,p3
     const session = await auth();
     if (!session?.user?.id) {
         return NextResponse.json({ error: 'User not authenticated.' }, { status: 401 });
@@ -18,72 +18,14 @@ export async function GET(req: NextRequest) {
     }
     const { searchParams } = new URL(req.url);
     const position_id = searchParams.get('position_id');
-    if (
-        !position_id ||
-        typeof position_id !== 'string' ||
-        position_id.length < 3 ||
-        !/^[a-zA-Z0-9_-]+$/.test(position_id)
-    ) {
-        return NextResponse.json({ error: 'Invalid or missing position_id' }, { status: 400 });
-    }
-    try {
-        // Get all candidate-position-links for this position
-        const links = await db
-            .select()
-            .from(candidatePositionLinks)
-            .where(eq(candidatePositionLinks.position_id, position_id));
+    const position_ids_str = searchParams.get('position_ids');
 
-        // For each link, get the candidate info
-        const candidatesForLinks = [];
-        for (const link of links) {
-            if (!link.candidate_id) continue;
-            const candidate = await db
-                .select({
-                    id: candidates.id,
-                    name: candidates.name,
-                    statement: candidates.statement,
-                })
-                .from(candidates)
-                .where(eq(candidates.id, String(link.candidate_id)));
-            if (candidate && candidate.length > 0) {
-                candidatesForLinks.push({
-                    candidate_id: link.candidate_id,
-                    position_id: link.position_id,
-                    candidate: {
-                        id: candidate[0].id,
-                        name: candidate[0].name,
-                        statement: candidate[0].statement,
-                    },
-                });
-            }
-        }
-        return NextResponse.json({ candidate_position_links: candidatesForLinks }, { status: 200 });
-    } catch (err) {
-        console.error('Candidate-position-links GET error:', err);
-        return NextResponse.json({ error: 'Server error' }, { status: 500 });
-    }
-}
-
-export async function POST(req: NextRequest) {
-    // Accepts either a single object (insert) or a batch query for position_ids
-    const session = await auth();
-    if (!session?.user?.id) {
-        return NextResponse.json({ error: 'User not authenticated.' }, { status: 401 });
-    }
-    const member = await isMember(session.user.id);
-    if (!member) {
-        return NextResponse.json({ error: 'Paid CS Club membership required.' }, { status: 403 });
-    }
-    let body;
-    try {
-        body = await req.json();
-    } catch {
-        return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-    }
-
-    // Batch query: { position_ids: string[] }
-    if (body && Array.isArray(body.position_ids)) {
-        const positionIds: string[] = body.position_ids;
+    if (position_ids_str) {
+        // Batch query: position_ids=p1,p2,p3
+        const positionIds: string[] = position_ids_str
+            .split(',')
+            .map((id) => id.trim())
+            .filter((id) => id.length > 0);
         if (!positionIds.length) {
             return NextResponse.json({ error: 'No position_ids provided' }, { status: 400 });
         }
@@ -134,9 +76,76 @@ export async function POST(req: NextRequest) {
             }));
 
         return NextResponse.json({ candidate_position_links: allLinks }, { status: 200 });
-    }
+    } else if (position_id) {
+        // Single position
+        if (
+            !position_id ||
+            typeof position_id !== 'string' ||
+            position_id.length < 3 ||
+            !/^[a-zA-Z0-9_-]+$/.test(position_id)
+        ) {
+            return NextResponse.json({ error: 'Invalid or missing position_id' }, { status: 400 });
+        }
+        try {
+            // Get all candidate-position-links for this position
+            const links = await db
+                .select()
+                .from(candidatePositionLinks)
+                .where(eq(candidatePositionLinks.position_id, position_id));
 
-    // Default: insert single candidate-position-link
+            // For each link, get the candidate info
+            const candidatesForLinks = [];
+            for (const link of links) {
+                if (!link.candidate_id) continue;
+                const candidate = await db
+                    .select({
+                        id: candidates.id,
+                        name: candidates.name,
+                        statement: candidates.statement,
+                    })
+                    .from(candidates)
+                    .where(eq(candidates.id, String(link.candidate_id)));
+                if (candidate && candidate.length > 0) {
+                    candidatesForLinks.push({
+                        candidate_id: link.candidate_id,
+                        position_id: link.position_id,
+                        candidate: {
+                            id: candidate[0].id,
+                            name: candidate[0].name,
+                            statement: candidate[0].statement,
+                        },
+                    });
+                }
+            }
+            return NextResponse.json(
+                { candidate_position_links: candidatesForLinks },
+                { status: 200 }
+            );
+        } catch (err) {
+            console.error('Candidate-position-links GET error:', err);
+            return NextResponse.json({ error: 'Server error' }, { status: 500 });
+        }
+    } else {
+        return NextResponse.json({ error: 'Missing position_id or position_ids' }, { status: 400 });
+    }
+}
+
+export async function POST(req: NextRequest) {
+    // Insert single candidate-position-link
+    const session = await auth();
+    if (!session?.user?.id) {
+        return NextResponse.json({ error: 'User not authenticated.' }, { status: 401 });
+    }
+    const member = await isMember(session.user.id);
+    if (!member) {
+        return NextResponse.json({ error: 'Paid CS Club membership required.' }, { status: 403 });
+    }
+    let body;
+    try {
+        body = await req.json();
+    } catch {
+        return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    }
     // Insert candidate-position-link into sqlite db using drizzle
     try {
         if (

@@ -65,10 +65,10 @@ export const Header = () => {
             if (session?.user?.id) {
                 try {
                     const { fetcher } = await import('../lib/fetcher');
-                    const response = await fetcher.post.query([
+                    const response = await fetcher.get.query([
                         'validate-member',
                         {
-                            json: { keycloak_id: session.user.id },
+                            searchParams: { keycloak_id: session.user.id },
                         },
                     ]);
                     // If response has ok: true, user is a paid member
