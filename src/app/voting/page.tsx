@@ -11,7 +11,7 @@ import {
     useDisclosure,
 } from '@heroui/react';
 import { useSession } from 'next-auth/react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import useSWR from 'swr';
 import useSWRMutation from 'swr/mutation';
 
@@ -30,6 +30,25 @@ export default function VotingPage() {
     const [statusMessage, setStatusMessage] = useState<string>('');
     const [candidates, setCandidates] = useState<Record<string, Candidate[]>>({});
     const [candidatesLoading, setCandidatesLoading] = useState(true);
+
+    // Update localStorage when voting order changes
+    const setCandidatesWithStorage = useCallback<
+        React.Dispatch<React.SetStateAction<Record<string, Candidate[]>>>
+    >(
+        (action) => {
+            const newCandidates = typeof action === 'function' ? action(candidates) : action;
+            setCandidates(newCandidates);
+            if (firstElection?.id) {
+                const key = `MV.voteOrder_${firstElection.id}`;
+                const orders: Record<string, string[]> = {};
+                for (const posId in newCandidates) {
+                    orders[posId] = newCandidates[posId].map((c) => c.id);
+                }
+                localStorage.setItem(key, JSON.stringify(orders));
+            }
+        },
+        [candidates, firstElection?.id]
+    );
 
     // Get student info from session
     const keycloakId = session?.user?.id;
@@ -244,18 +263,34 @@ export default function VotingPage() {
                         grouped[posId].push({ ...candidate, executive: pos?.executive });
                     }
                 }
-                // Shuffle candidates for each position
+                // Shuffle candidates for each position or use saved order
                 const shuffled: Record<string, Candidate[]> = {};
+                const key = `MV.voteOrder_${firstElection.id}`;
+                const savedOrders = localStorage.getItem(key);
+                const orders: Record<string, string[]> = savedOrders ? JSON.parse(savedOrders) : {};
+                const updated = { ...orders };
                 for (const posId in grouped) {
-                    shuffled[posId] = [...grouped[posId]].sort(() => Math.random() - 0.5);
+                    if (orders[posId]) {
+                        shuffled[posId] = [...grouped[posId]].sort(
+                            (a, b) => orders[posId].indexOf(a.id) - orders[posId].indexOf(b.id)
+                        );
+                    } else {
+                        const randomized = [...grouped[posId]].sort(() => Math.random() - 0.5);
+                        shuffled[posId] = randomized;
+                        updated[posId] = randomized.map((c) => c.id);
+                    }
                 }
-                setCandidates(shuffled);
+                if (Object.keys(updated).length > Object.keys(orders).length) {
+                    localStorage.setItem(key, JSON.stringify(updated));
+                }
+                setCandidatesWithStorage(shuffled);
             } finally {
                 // Only hide skeletons if positions are loaded
                 if (positions.length) setCandidatesLoading(false);
             }
         };
         fetchAllCandidatesAndLinks();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [firstElection, positions, hasVoted, studentId]);
 
     // Handle form submit
@@ -384,7 +419,7 @@ export default function VotingPage() {
                                 key={position.id}
                                 position={position}
                                 candidates={candidates}
-                                setCandidates={setCandidates}
+                                setCandidates={setCandidatesWithStorage}
                                 loading={candidatesLoading}
                             />
                         ))}
@@ -400,7 +435,7 @@ export default function VotingPage() {
                                 key={position.id}
                                 position={position}
                                 candidates={candidates}
-                                setCandidates={setCandidates}
+                                setCandidates={setCandidatesWithStorage}
                                 loading={candidatesLoading}
                             />
                         ))}
@@ -443,7 +478,7 @@ export default function VotingPage() {
                             key={position.id}
                             position={position}
                             candidates={candidates}
-                            setCandidates={setCandidates}
+                            setCandidates={setCandidatesWithStorage}
                             loading={candidatesLoading}
                         />
                     ))}
