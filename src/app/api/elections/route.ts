@@ -71,7 +71,13 @@ export async function GET() {
     try {
         const data = await db.select().from(elections);
         const electionInfo = data.map(({ id, name, status }) => ({ id, name, status }));
-        return NextResponse.json(electionInfo, { status: 200 });
+        return NextResponse.json(electionInfo, {
+            status: 200,
+            headers: {
+                'Cache-Control': 'private, max-age=300',
+                'Content-Type': 'application/json',
+            },
+        });
     } catch (err) {
         console.error('Elections GET error:', err);
         return NextResponse.json({ error: 'Server error' }, { status: 500 });

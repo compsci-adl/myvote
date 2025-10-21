@@ -43,7 +43,16 @@ export async function GET(req: NextRequest) {
             .where(and(eq(voters.student_id, student_id), eq(voters.election, election_id)))
             .then((rows) => rows[0]);
         if (!voter) {
-            return NextResponse.json({ voted: false, ballots: [] }, { status: 200 });
+            return NextResponse.json(
+                { voted: false, ballots: [] },
+                {
+                    status: 200,
+                    headers: {
+                        'Cache-Control': 'private, max-age=0',
+                        'Content-Type': 'application/json',
+                    },
+                }
+            );
         }
         // Find ballots for this voter
         const ballotsForVoter = await db
@@ -51,7 +60,16 @@ export async function GET(req: NextRequest) {
             .from(ballots)
             .where(eq(ballots.voter_id, voter.id));
         const voted = ballotsForVoter.length > 0;
-        return NextResponse.json({ voted }, { status: 200 });
+        return NextResponse.json(
+            { voted },
+            {
+                status: 200,
+                headers: {
+                    'Cache-Control': 'private, max-age=0',
+                    'Content-Type': 'application/json',
+                },
+            }
+        );
     } catch (err) {
         console.error('Votes GET error:', err);
         return NextResponse.json({ error: 'Server error' }, { status: 500 });

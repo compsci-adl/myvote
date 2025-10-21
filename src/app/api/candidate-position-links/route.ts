@@ -4,6 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db } from '@/db/index';
 import { candidatePositionLinks, candidates } from '@/db/schema';
+import { SERVER_CACHE_TTL } from '@/lib/cache-config';
+import { serverCache, serverCacheKeys } from '@/lib/server-cache';
 import { isMember } from '@/utils/is-member';
 
 export async function GET(req: NextRequest) {
@@ -32,6 +34,23 @@ export async function GET(req: NextRequest) {
         if (!positionIds.every((id) => typeof id === 'string' && id.length > 2)) {
             return NextResponse.json({ error: 'Invalid position_ids' }, { status: 400 });
         }
+
+        // Check cache first
+        const cacheKey = serverCacheKeys.candidatePositionLinks(positionIds);
+        const cachedResult = serverCache.get(cacheKey);
+        if (cachedResult) {
+            return NextResponse.json(
+                { candidate_position_links: cachedResult },
+                {
+                    status: 200,
+                    headers: {
+                        'Cache-Control': 'private, max-age=600',
+                        'Content-Type': 'application/json',
+                    },
+                }
+            );
+        }
+
         // Fetch all links for all positions in one go
         const links = await db
             .select()
@@ -75,7 +94,19 @@ export async function GET(req: NextRequest) {
                 candidate: candidateMap.get(String(link.candidate_id)),
             }));
 
-        return NextResponse.json({ candidate_position_links: allLinks }, { status: 200 });
+        // Cache the result
+        serverCache.set(cacheKey, allLinks, SERVER_CACHE_TTL.CANDIDATE_POSITION_LINKS);
+
+        return NextResponse.json(
+            { candidate_position_links: allLinks },
+            {
+                status: 200,
+                headers: {
+                    'Cache-Control': 'private, max-age=600',
+                    'Content-Type': 'application/json',
+                },
+            }
+        );
     } else if (position_id) {
         // Single position
         if (
@@ -86,6 +117,23 @@ export async function GET(req: NextRequest) {
         ) {
             return NextResponse.json({ error: 'Invalid or missing position_id' }, { status: 400 });
         }
+
+        // Check cache first for single position
+        const cacheKey = serverCacheKeys.candidatePositionLinks([position_id]);
+        const cachedResult = serverCache.get(cacheKey);
+        if (cachedResult) {
+            return NextResponse.json(
+                { candidate_position_links: cachedResult },
+                {
+                    status: 200,
+                    headers: {
+                        'Cache-Control': 'private, max-age=600',
+                        'Content-Type': 'application/json',
+                    },
+                }
+            );
+        }
+
         try {
             // Get all candidate-position-links for this position
             const links = await db
@@ -117,9 +165,23 @@ export async function GET(req: NextRequest) {
                     });
                 }
             }
+
+            // Cache the result
+            serverCache.set(
+                cacheKey,
+                candidatesForLinks,
+                SERVER_CACHE_TTL.CANDIDATE_POSITION_LINKS
+            );
+
             return NextResponse.json(
                 { candidate_position_links: candidatesForLinks },
-                { status: 200 }
+                {
+                    status: 200,
+                    headers: {
+                        'Cache-Control': 'private, max-age=600',
+                        'Content-Type': 'application/json',
+                    },
+                }
             );
         } catch (err) {
             console.error('Candidate-position-links GET error:', err);

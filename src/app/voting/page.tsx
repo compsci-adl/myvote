@@ -16,6 +16,9 @@ import useSWR from 'swr';
 import useSWRMutation from 'swr/mutation';
 
 import { PositionSection } from '@/components/PositionSection';
+import { useCandidatePositionLinksMultiple } from '@/components/useCandidatePositionLinks';
+import { useVotes } from '@/components/useVotes';
+import { SWR_CONFIG } from '@/lib/cache-config';
 import { fetcher } from '@/lib/fetcher';
 import type { Candidate } from '@/types/candidate';
 import type { Position } from '@/types/position';
@@ -36,18 +39,21 @@ export default function VotingPage() {
         React.Dispatch<React.SetStateAction<Record<string, Candidate[]>>>
     >(
         (action) => {
-            const newCandidates = typeof action === 'function' ? action(candidates) : action;
-            setCandidates(newCandidates);
-            if (firstElection?.id) {
-                const key = `MV.voteOrder_${firstElection.id}`;
-                const orders: Record<string, string[]> = {};
-                for (const posId in newCandidates) {
-                    orders[posId] = newCandidates[posId].map((c) => c.id);
+            setCandidates((prevCandidates) => {
+                const newCandidates =
+                    typeof action === 'function' ? action(prevCandidates) : action;
+                if (firstElection?.id) {
+                    const key = `MV.voteOrder_${firstElection.id}`;
+                    const orders: Record<string, string[]> = {};
+                    for (const posId in newCandidates) {
+                        orders[posId] = newCandidates[posId].map((c) => c.id);
+                    }
+                    localStorage.setItem(key, JSON.stringify(orders));
                 }
-                localStorage.setItem(key, JSON.stringify(orders));
-            }
+                return newCandidates;
+            });
         },
-        [candidates, firstElection?.id]
+        [firstElection?.id]
     );
 
     // Get student info from session
@@ -55,79 +61,63 @@ export default function VotingPage() {
     const studentName = session?.user?.name;
     const [studentId, setStudentId] = useState<string | null | undefined>(undefined);
 
-    // Fetch studentId from member table
+    // Shared SWR fetcher
+    const swrFetcher = async (url: string) => fetch(url).then((res) => res.json());
+
+    // Fetch membership info using hook
+    const { data: membershipData } = useSWR(
+        keycloakId ? `/api/membership?keycloak_id=${keycloakId}` : null,
+        swrFetcher,
+        SWR_CONFIG
+    );
+
+    // Get student info from session
     useEffect(() => {
-        if (!keycloakId) return;
-        const fetchStudentId = async () => {
-            try {
-                const res = await fetch(`/api/membership?keycloak_id=${keycloakId}`);
-                const data = await res.json();
-                // If membership found, get studentId
-                if (Array.isArray(data) && data.length > 0 && data[0].studentId) {
-                    setStudentId(data[0].studentId);
-                } else {
-                    setStudentId(null);
-                    alert(
-                        'Error: No student ID found for your account. Please ensure you have added your student number to your profile on the CS Club website and try again.'
-                    );
-                }
-            } catch {
+        if (membershipData && Array.isArray(membershipData) && membershipData.length > 0) {
+            if (membershipData[0].studentId) {
+                setStudentId(membershipData[0].studentId);
+            } else {
                 setStudentId(null);
                 alert(
-                    'Error: Unable to fetch your student ID. Please ensure you have added your student number to your profile on the CS Club website and try again.'
+                    'Error: No student ID found for your account. Please ensure you have added your student number to your profile on the CS Club website and try again.'
                 );
             }
-        };
-        fetchStudentId();
-    }, [keycloakId]);
+        } else if (membershipData && membershipData.error) {
+            setStudentId(null);
+            alert(
+                'Error: Unable to fetch your student ID. Please ensure you have added your student number to your profile on the CS Club website and try again.'
+            );
+        }
+    }, [membershipData]);
 
     // Membership and vote status state
     const [isMember, setIsMember] = useState<boolean | null>(null);
     const [hasVoted, setHasVoted] = useState<boolean | null>(null);
 
-    // Fetch election data
-    const swrFetcher = async (url: string) => fetch(url).then((res) => res.json());
+    // Fetch election data with proper SWR caching
     const { data: electionsData, isLoading: electionsLoading } = useSWR(
         '/api/elections',
-        swrFetcher
+        swrFetcher,
+        SWR_CONFIG
     );
 
-    // Membership check
+    // Update isMember based on membershipData
     useEffect(() => {
-        if (!keycloakId) return;
-        const checkMembership = async () => {
-            try {
-                const res = await fetch(`/api/membership?keycloak_id=${keycloakId}`);
-                const data = await res.json();
-                // If membership found and not expired, allow voting
-                setIsMember(Array.isArray(data) && data.length > 0);
-            } catch {
-                setIsMember(false);
-            }
-        };
-        checkMembership();
-    }, [keycloakId]);
+        if (membershipData && Array.isArray(membershipData) && membershipData.length > 0) {
+            setIsMember(true);
+        } else {
+            setIsMember(false);
+        }
+    }, [membershipData]);
 
-    // Check if user has already voted for this election
+    // Check if user has already voted for this election using hook
+    const { data: votesData } = useVotes(firstElection?.id, studentId);
+
     useEffect(() => {
-        if (!studentId || !firstElection?.id) return;
-        if (studentId === null) return;
-        const checkVoted = async () => {
-            try {
-                // Query API for ballots for this user and election only
-                const res = await fetch(
-                    `/api/votes?election_id=${firstElection.id}&student_id=${studentId}`
-                );
-                const data = await res.json();
-                // If any ballot for this student, mark as voted
-                const voted = data.voted;
-                setHasVoted(voted);
-            } catch {
-                setHasVoted(false);
-            }
-        };
-        checkVoted();
-    }, [studentId, keycloakId, firstElection]);
+        if (votesData && typeof votesData === 'object' && 'voted' in votesData) {
+            setHasVoted((votesData as { voted: boolean }).voted);
+        }
+    }, [votesData]);
 
     useEffect(() => {
         if (electionsData && electionsData.length > 0) {
@@ -225,10 +215,21 @@ export default function VotingPage() {
         }
     );
 
-    // Batch fetch all candidates for all positions using candidate-position-links
+    // Batch fetch all candidates for all positions using hook
+    const positionIds = positions.map((p) => p.id);
+    const { data: candidateLinksData, isLoading: candidatesIsLoading } =
+        useCandidatePositionLinksMultiple(positions.length > 0 ? positionIds : undefined);
+
     useEffect(() => {
         if (studentId === null) return; // Prevent loading if studentId is missing
-        if (!firstElection?.id || positions.length === 0 || hasVoted) return;
+        if (!firstElection?.id || positions.length === 0) return;
+
+        // If still loading candidate data, show skeleton
+        if (!candidateLinksData || candidatesIsLoading) {
+            setCandidatesLoading(true);
+            return;
+        }
+
         type CandidatePositionLink = {
             candidate: Candidate;
             position_id: string | number;
@@ -236,65 +237,60 @@ export default function VotingPage() {
         type CandidatePositionLinksResponse = {
             candidate_position_links: CandidatePositionLink[];
         };
-        const fetchAllCandidatesAndLinks = async () => {
-            // Only show skeleton if there are positions to fetch for
-            if (!positions.length) return;
-            setCandidatesLoading(true);
-            try {
-                const posIds = positions.map((p) => p.id);
-                const data = (await fetcher.get.query([
-                    'candidate-position-links',
-                    {
-                        searchParams: { position_ids: posIds.join(',') },
-                    },
-                ])) as CandidatePositionLinksResponse;
-                const grouped: Record<string, Candidate[]> = {};
-                if (
-                    data &&
-                    typeof data === 'object' &&
-                    'candidate_position_links' in data &&
-                    Array.isArray(data.candidate_position_links)
-                ) {
-                    for (const link of data.candidate_position_links) {
-                        const candidate = link.candidate;
-                        const posId = link.position_id;
-                        if (!candidate) continue;
-                        if (!grouped[posId]) {
-                            grouped[posId] = [];
-                        }
-                        const pos = positions.find((p) => String(p.id) === String(posId));
-                        grouped[posId].push({ ...candidate, executive: pos?.executive });
+
+        try {
+            const data = candidateLinksData as CandidatePositionLinksResponse;
+            const grouped: Record<string, Candidate[]> = {};
+            if (
+                data &&
+                typeof data === 'object' &&
+                'candidate_position_links' in data &&
+                Array.isArray(data.candidate_position_links)
+            ) {
+                for (const link of data.candidate_position_links) {
+                    const candidate = link.candidate;
+                    const posId = link.position_id;
+                    if (!candidate) continue;
+                    if (!grouped[posId]) {
+                        grouped[posId] = [];
                     }
+                    const pos = positions.find((p) => String(p.id) === String(posId));
+                    grouped[posId].push({ ...candidate, executive: pos?.executive });
                 }
-                // Shuffle candidates for each position or use saved order
-                const shuffled: Record<string, Candidate[]> = {};
-                const key = `MV.voteOrder_${firstElection.id}`;
-                const savedOrders = localStorage.getItem(key);
-                const orders: Record<string, string[]> = savedOrders ? JSON.parse(savedOrders) : {};
-                const updated = { ...orders };
-                for (const posId in grouped) {
-                    if (orders[posId]) {
-                        shuffled[posId] = [...grouped[posId]].sort(
-                            (a, b) => orders[posId].indexOf(a.id) - orders[posId].indexOf(b.id)
-                        );
-                    } else {
-                        const randomized = [...grouped[posId]].sort(() => Math.random() - 0.5);
-                        shuffled[posId] = randomized;
-                        updated[posId] = randomized.map((c) => c.id);
-                    }
-                }
-                if (Object.keys(updated).length > Object.keys(orders).length) {
-                    localStorage.setItem(key, JSON.stringify(updated));
-                }
-                setCandidatesWithStorage(shuffled);
-            } finally {
-                // Only hide skeletons if positions are loaded
-                if (positions.length) setCandidatesLoading(false);
             }
-        };
-        fetchAllCandidatesAndLinks();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [firstElection, positions, hasVoted, studentId]);
+            // Shuffle candidates for each position or use saved order
+            const shuffled: Record<string, Candidate[]> = {};
+            const key = `MV.voteOrder_${firstElection.id}`;
+            const savedOrders = localStorage.getItem(key);
+            const orders: Record<string, string[]> = savedOrders ? JSON.parse(savedOrders) : {};
+            const updated = { ...orders };
+            for (const posId in grouped) {
+                if (orders[posId]) {
+                    shuffled[posId] = [...grouped[posId]].sort(
+                        (a, b) => orders[posId].indexOf(a.id) - orders[posId].indexOf(b.id)
+                    );
+                } else {
+                    const randomized = [...grouped[posId]].sort(() => Math.random() - 0.5);
+                    shuffled[posId] = randomized;
+                    updated[posId] = randomized.map((c) => c.id);
+                }
+            }
+            if (Object.keys(updated).length > Object.keys(orders).length) {
+                localStorage.setItem(key, JSON.stringify(updated));
+            }
+            setCandidatesWithStorage(shuffled);
+        } finally {
+            // Only hide skeletons if positions are loaded
+            if (positions.length) setCandidatesLoading(false);
+        }
+    }, [
+        firstElection,
+        positions,
+        studentId,
+        candidateLinksData,
+        candidatesIsLoading,
+        setCandidatesWithStorage,
+    ]);
 
     // Handle form submit
     const handleSubmit = async () => {
