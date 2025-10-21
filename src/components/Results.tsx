@@ -4,36 +4,19 @@ import { Button, Card, CardBody, CardHeader } from '@heroui/react';
 import { useEffect, useMemo, useState } from 'react';
 import useSWR from 'swr';
 
+import type { CandidateResult } from '@/types/candidate-result';
+import type { PositionResult } from '@/types/position-result';
+import type { Voter } from '@/types/voter';
+import type { Winner } from '@/types/winner';
+
 import { fetcher } from '../lib/fetcher';
 
 interface ResultsProps {
     electionId: string;
 }
 
-interface Candidate {
-    id: string;
-    name: string;
-    ranking: number;
-    total_points: number;
-    borda_points: number;
-    excluded: boolean;
-}
-
-interface Winner {
-    id: string;
-    name: string;
-    ranking: number;
-}
-
-interface Position {
-    position_id: string;
-    position_name: string;
-    winners: Winner[];
-    candidates: Candidate[];
-    vacancies: number;
-}
 export default function Results({ electionId }: ResultsProps) {
-    const [results, setResults] = useState<Position[]>([]);
+    const [results, setResults] = useState<PositionResult[]>([]);
     const [winnerSelections, setWinnerSelections] = useState<Record<string, string>>({}); // candidateId -> positionId
     const [finalised, setFinalised] = useState(false);
     const [warnings, setWarnings] = useState<string[]>([]);
@@ -41,7 +24,7 @@ export default function Results({ electionId }: ResultsProps) {
     const [exclusions, setExclusions] = useState<Record<string, string[]>>({});
 
     // Fetch election results
-    type ApiResult = { results: Position[] };
+    type ApiResult = { results: PositionResult[] };
     const { data, isValidating } = useSWR<ApiResult>(
         [`results/${electionId}`, null],
         ([url]) => fetcher.get.query([url]) as Promise<ApiResult>
@@ -116,7 +99,7 @@ export default function Results({ electionId }: ResultsProps) {
                     const pos = results.find((p) => p.position_id === pid);
                     const tempSelections = { ...winnerSelections, [mw.id]: pid };
                     const projWinners = pos
-                        ? pos.winners.filter((w) => {
+                        ? pos.winners.filter((w: Winner) => {
                               const mw2 = multiWinners.find((m) => m.id === w.id);
                               if (mw2) {
                                   return tempSelections[w.id] === pos.position_id;
@@ -167,12 +150,13 @@ export default function Results({ electionId }: ResultsProps) {
                 const excluded = exclusions[pos.position_id] || [];
                 const manual = manualOverrides[pos.position_id] || [];
                 const finalWinners = [
-                    ...pos.winners.filter((w) => !excluded.includes(w.id)),
+                    ...pos.winners.filter((w: Winner) => !excluded.includes(w.id)),
                     ...manual.map((id) => ({ id, name: '' })), // dummy winner object
                 ];
                 if (
                     finalWinners.length < pos.vacancies &&
-                    pos.candidates.filter((c) => !excluded.includes(c.id)).length === 0
+                    pos.candidates.filter((c: CandidateResult) => !excluded.includes(c.id))
+                        .length === 0
                 ) {
                     newWarnings.push(
                         `${pos.position_name} would have ${finalWinners.length} winner(s) but needs ${pos.vacancies}`
@@ -220,7 +204,7 @@ export default function Results({ electionId }: ResultsProps) {
         const csvRows: string[][] = [];
         csvRows.push(['Position', 'Candidate', 'Is Winner', 'Hare-Clark Points', 'Borda Points']);
         for (const pos of results) {
-            const winnerIds = new Set(pos.winners.map((w) => w.id));
+            const winnerIds = new Set(pos.winners.map((w: Winner) => w.id));
             for (const cand of pos.candidates) {
                 csvRows.push([
                     pos.position_name,
@@ -243,6 +227,34 @@ export default function Results({ electionId }: ResultsProps) {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+    };
+
+    // Export voters to CSV
+    const exportVotersToCSV = async () => {
+        try {
+            const resp = (await fetcher.get.query([`voters/${electionId}`])) as { voters: Voter[] };
+            const voters = resp.voters || [];
+            const csvRows: string[][] = [];
+            csvRows.push(['Name', 'Student ID']);
+            for (const voter of voters) {
+                csvRows.push([voter.name || '', voter.student_id]);
+            }
+            const csvContent = csvRows
+                .map((row) => row.map((field) => `"${field.replace(/"/g, '""')}"`).join(','))
+                .join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'election_voters.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Error exporting voters:', error);
+            alert('Failed to export voters. Please try again.');
+        }
     };
 
     // Sort positions: exec first in specific order, then managers alphabetically, then others alphabetically
@@ -325,7 +337,7 @@ export default function Results({ electionId }: ResultsProps) {
                                     const pos = results.find((p) => p.position_id === pid);
                                     const tempSelections = { ...winnerSelections, [mw.id]: pid };
                                     const projWinners = pos
-                                        ? pos.winners.filter((w) => {
+                                        ? pos.winners.filter((w: Winner) => {
                                               const mw2 = multiWinners.find((m) => m.id === w.id);
                                               if (mw2) {
                                                   return tempSelections[w.id] === pos.position_id;
@@ -333,11 +345,12 @@ export default function Results({ electionId }: ResultsProps) {
                                               return true;
                                           })
                                         : [];
-                                    const isOverCapacity = pos && projWinners.length > pos.vacancies;
+                                    const isOverCapacity =
+                                        pos && projWinners.length > pos.vacancies;
                                     const isAtCapacity =
                                         pos &&
                                         projWinners.length >= pos.vacancies &&
-                                        !projWinners.some((w) => w.id === mw.id);
+                                        !projWinners.some((w: Winner) => w.id === mw.id);
                                     const label = isOverCapacity
                                         ? `${mw.positionNames[idx]} (Full)`
                                         : isAtCapacity
@@ -427,7 +440,7 @@ export default function Results({ electionId }: ResultsProps) {
                             </h3>
                             {position.winners.length > 0 ? (
                                 <ul className="list-disc pl-5">
-                                    {position.winners.map((winner) => (
+                                    {position.winners.map((winner: Winner) => (
                                         <li key={winner.id} className="font-semibold">
                                             {winner.name || winner.id}
                                         </li>
@@ -469,7 +482,7 @@ export default function Results({ electionId }: ResultsProps) {
                                 </thead>
                                 <tbody>
                                     {position.candidates
-                                        .sort((a, b) => {
+                                        .sort((a: CandidateResult, b: CandidateResult) => {
                                             if (b.total_points !== a.total_points) {
                                                 return b.total_points - a.total_points;
                                             }
@@ -478,7 +491,7 @@ export default function Results({ electionId }: ResultsProps) {
                                             }
                                             return (a.name || a.id).localeCompare(b.name || b.id);
                                         })
-                                        .map((candidate) => (
+                                        .map((candidate: CandidateResult) => (
                                             <tr
                                                 key={candidate.id}
                                                 className="text-center bg-gray-50 dark:bg-gray-700"
@@ -511,7 +524,8 @@ export default function Results({ electionId }: ResultsProps) {
                                     onPress={() =>
                                         setManualOverrides((prev) => ({
                                             ...prev,
-                                            [position.position_id]: prev[position.position_id] || [],
+                                            [position.position_id]:
+                                                prev[position.position_id] || [],
                                         }))
                                     }
                                 >
@@ -520,8 +534,9 @@ export default function Results({ electionId }: ResultsProps) {
                                 {manualOverrides[position.position_id] && (
                                     <div className="mt-2 p-4 rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                                         <p>Select up to {position.vacancies} winners:</p>
-                                        {position.candidates.map((cand) => {
-                                            const winningPos = candidateWinningPositions[cand.id] || [];
+                                        {position.candidates.map((cand: CandidateResult) => {
+                                            const winningPos =
+                                                candidateWinningPositions[cand.id] || [];
                                             const label =
                                                 winningPos.length > 0
                                                     ? `${cand.name || cand.id} (already winner for ${winningPos.join(
@@ -532,7 +547,7 @@ export default function Results({ electionId }: ResultsProps) {
                                                 <label key={cand.id} className="block">
                                                     <input
                                                         type="checkbox"
-                                                        className='mr-2'
+                                                        className="mr-2"
                                                         checked={
                                                             manualOverrides[
                                                                 position.position_id
@@ -540,11 +555,13 @@ export default function Results({ electionId }: ResultsProps) {
                                                         }
                                                         onChange={(e) => {
                                                             const selected =
-                                                                manualOverrides[position.position_id] ||
-                                                                [];
+                                                                manualOverrides[
+                                                                    position.position_id
+                                                                ] || [];
                                                             if (e.target.checked) {
                                                                 if (
-                                                                    selected.length < position.vacancies
+                                                                    selected.length <
+                                                                    position.vacancies
                                                                 ) {
                                                                     setManualOverrides((prev) => ({
                                                                         ...prev,
@@ -575,8 +592,10 @@ export default function Results({ electionId }: ResultsProps) {
                                             size="sm"
                                             onPress={async () => {
                                                 // Build exclusions for manually overridden candidates to ensure only 1 position per person
-                                                const additionalExclusions: Record<string, string[]> =
-                                                    {};
+                                                const additionalExclusions: Record<
+                                                    string,
+                                                    string[]
+                                                > = {};
                                                 for (const [posId, winners] of Object.entries(
                                                     manualOverrides
                                                 )) {
@@ -627,9 +646,12 @@ export default function Results({ electionId }: ResultsProps) {
                 );
             })}
 
-            <div className="mt-8 text-center">
+            <div className="mt-8 text-center space-x-4">
                 <Button color="primary" onPress={exportToCSV}>
                     Export Results to CSV
+                </Button>
+                <Button color="primary" onPress={exportVotersToCSV}>
+                    Export Voters to CSV
                 </Button>
             </div>
         </div>
