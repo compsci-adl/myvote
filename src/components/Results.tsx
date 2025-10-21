@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import useSWR from 'swr';
 
 import type { CandidateResult } from '@/types/candidate-result';
+import type { Election } from '@/types/election';
 import type { PositionResult } from '@/types/position-result';
 import type { Voter } from '@/types/voter';
 import type { Winner } from '@/types/winner';
@@ -29,6 +30,15 @@ export default function Results({ electionId }: ResultsProps) {
         [`results/${electionId}`, null],
         ([url]) => fetcher.get.query([url]) as Promise<ApiResult>
     );
+
+    // Fetch elections to get election name
+    const { data: electionsData } = useSWR<Election[]>(
+        [`elections`],
+        ([url]: [string]) => fetcher.get.query([url]) as Promise<Election[]>
+    );
+
+    const election = electionsData?.find((e) => e.id === electionId);
+    const electionName = election?.name || 'election';
 
     // Always update results when data changes
     useEffect(() => {
@@ -222,7 +232,7 @@ export default function Results({ electionId }: ResultsProps) {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'election_results.csv';
+        a.download = `${electionName} Results.csv`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -246,7 +256,7 @@ export default function Results({ electionId }: ResultsProps) {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'election_voters.csv';
+            a.download = `${electionName} Voters.csv`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
