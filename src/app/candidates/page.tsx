@@ -82,9 +82,12 @@ export default function CandidatesPage() {
                 candidate_position_links: CandidatePositionLink[];
             };
 
-            const data = (await fetcher.post.mutate('/candidate-position-links', {
-                arg: { position_ids: posIds },
-            })) as CandidatePositionLinksResponse;
+            const data = (await fetcher.get.query([
+                'candidate-position-links',
+                {
+                    searchParams: { position_ids: posIds.join(',') },
+                },
+            ])) as CandidatePositionLinksResponse;
             const candidateMap: Record<string, Candidate & { positions: string[] }> = {};
             if (
                 data &&

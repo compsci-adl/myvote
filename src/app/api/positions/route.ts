@@ -4,6 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db } from '@/db/index';
 import { positions } from '@/db/schema';
+import { SERVER_CACHE_TTL } from '@/lib/cache-config';
+import { serverCache, serverCacheKeys } from '@/lib/server-cache';
 import { isMember } from '@/utils/is-member';
 
 export async function GET(req: NextRequest) {
@@ -27,6 +29,22 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: 'Invalid or missing election_id' }, { status: 400 });
     }
     try {
+        // Check cache first
+        const cacheKey = serverCacheKeys.position(election_id);
+        const cachedPositions = serverCache.get(cacheKey);
+        if (cachedPositions) {
+            return NextResponse.json(
+                { positions: cachedPositions },
+                {
+                    status: 200,
+                    headers: {
+                        'Cache-Control': 'private, max-age=300',
+                        'Content-Type': 'application/json',
+                    },
+                }
+            );
+        }
+
         // Query positions from sqlite db using drizzle
         const data = await db
             .select()
@@ -40,7 +58,20 @@ export async function GET(req: NextRequest) {
             vacancies,
             executive,
         }));
-        return NextResponse.json({ positions: positionInfo }, { status: 200 });
+
+        // Cache the result
+        serverCache.set(cacheKey, positionInfo, SERVER_CACHE_TTL.POSITIONS);
+
+        return NextResponse.json(
+            { positions: positionInfo },
+            {
+                status: 200,
+                headers: {
+                    'Cache-Control': 'private, max-age=300',
+                    'Content-Type': 'application/json',
+                },
+            }
+        );
     } catch (err) {
         console.error('Positions GET error:', err);
         return NextResponse.json({ error: 'Server error' }, { status: 500 });
@@ -104,6 +135,11 @@ export async function POST(req: NextRequest) {
                 election_id: election_id,
             })
             .returning();
+
+        // Invalidate cache for this election
+        const cacheKey = serverCacheKeys.position(election_id);
+        serverCache.clear(cacheKey);
+
         const positionInfo = {
             id: position.id,
             name: position.name,
