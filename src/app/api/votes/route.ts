@@ -173,36 +173,43 @@ export async function POST(req: NextRequest) {
         }
         // Delete previous ballots for this voter (if any)
         await db.delete(ballots).where(eq(ballots.voter_id, voter.id));
-        // Insert new ballots
-        const batchSize = 20;
-        const insertedVotes = [];
-        for (let i = 0; i < votesArray.length; i += batchSize) {
-            const batch = votesArray.slice(i, i + batchSize);
-            for (const voteData of batch) {
-                // Validate voteData
-                if (
-                    !voteData.position ||
-                    typeof voteData.position !== 'string' ||
-                    voteData.position.length < 3 ||
-                    !Array.isArray(voteData.preferences)
-                ) {
-                    insertedVotes.push({ error: 'Invalid vote data', vote: voteData });
-                    continue;
-                }
-                const ballotId = crypto.randomUUID();
-                const [vote] = await db
-                    .insert(ballots)
-                    .values({
-                        id: ballotId,
-                        voter_id: voter.id,
-                        position: voteData.position,
-                        preferences: voteData.preferences,
-                    })
-                    .returning();
-                insertedVotes.push({ id: vote.id, position: vote.position });
+
+        // Validate and prepare all votes for batch insert
+        const validVotes = [];
+        const errors = [];
+        for (const voteData of votesArray) {
+            if (
+                !voteData.position ||
+                typeof voteData.position !== 'string' ||
+                voteData.position.length < 3 ||
+                !Array.isArray(voteData.preferences)
+            ) {
+                errors.push({ error: 'Invalid vote data', vote: voteData });
+                continue;
             }
+            validVotes.push({
+                id: crypto.randomUUID(),
+                voter_id: voter.id,
+                position: voteData.position,
+                preferences: voteData.preferences,
+            });
         }
-        return NextResponse.json(insertedVotes, { status: 201 });
+
+        // Batch insert all valid votes at once
+        let insertedVotes: Array<{ id: string; position: string }> = [];
+        if (validVotes.length > 0) {
+            insertedVotes = await db
+                .insert(ballots)
+                .values(validVotes)
+                .returning()
+                .then((results) =>
+                    results.map((vote) => ({ id: vote.id, position: vote.position }))
+                );
+        }
+
+        // Combine results with any errors
+        const allResults = [...insertedVotes, ...errors];
+        return NextResponse.json(allResults, { status: 201 });
     } catch (err) {
         console.error('Votes POST error:', err);
         return NextResponse.json({ error: 'Server error' }, { status: 500 });
