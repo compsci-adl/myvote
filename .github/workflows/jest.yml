@@ -1,6 +1,10 @@
 name: Jests Tests
 on:
   workflow_call:
+ 
+permissions:
+  contents: read
+
 jobs:
   test:
     timeout-minutes: 60
