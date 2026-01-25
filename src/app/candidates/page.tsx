@@ -17,7 +17,9 @@ const useFocusedUsers = () => ({ focusedUsers: [] });
 export default function CandidatesPage() {
     const { focusedUsers } = useFocusedUsers();
     const r = useRef(new Map());
-    setRefs(r);
+    useEffect(() => {
+        setRefs(r);
+    }, []);
 
     const [firstElection, setFirstElection] = useState<{
         id?: number;
@@ -61,18 +63,19 @@ export default function CandidatesPage() {
                 },
                 {}
             );
-            setPositions(positionMap);
+            Promise.resolve().then(() => setPositions(positionMap));
         }
     }, [positionsData]);
 
     // Fetch all candidates and their positions for the election
     useEffect(() => {
-        setLoading(true);
-        const fetchAllCandidatesAndLinks = async () => {
-            if (!firstElection.id || !positions || Object.keys(positions).length === 0) {
-                setCandidates({});
-                return;
-            }
+        Promise.resolve().then(() => {
+            setLoading(true);
+            const fetchAllCandidatesAndLinks = async () => {
+                if (!firstElection.id || !positions || Object.keys(positions).length === 0) {
+                    setCandidates({});
+                    return;
+                }
             const posIds = Object.keys(positions);
             type CandidatePositionLink = {
                 candidate: Candidate;
@@ -113,8 +116,9 @@ export default function CandidatesPage() {
             }
             setCandidates(candidateMap);
             setLoading(false);
-        };
-        fetchAllCandidatesAndLinks();
+            };
+            fetchAllCandidatesAndLinks();
+        });
     }, [firstElection.id, positions]);
 
     useMount(() => {
@@ -124,11 +128,11 @@ export default function CandidatesPage() {
     useEffect(() => {
         if (!firstElection.id) return;
         if (firstElection.status && firstElection.status < 3) {
-            setMessage("Voting hasn't opened yet.");
+            Promise.resolve().then(() => setMessage("Voting hasn't opened yet."));
         } else if (firstElection.status && firstElection.status > 3) {
-            setMessage('Voting has closed.');
+            Promise.resolve().then(() => setMessage('Voting has closed.'));
         } else {
-            setMessage('');
+            Promise.resolve().then(() => setMessage(''));
         }
     }, [firstElection]);
 

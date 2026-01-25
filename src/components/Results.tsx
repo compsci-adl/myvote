@@ -43,7 +43,7 @@ export default function Results({ electionId }: ResultsProps) {
     // Always update results when data changes
     useEffect(() => {
         if (data && data.results) {
-            setResults(data.results);
+            Promise.resolve().then(() => setResults(data.results));
         }
     }, [data]);
 
@@ -94,7 +94,7 @@ export default function Results({ electionId }: ResultsProps) {
     // If results change, and there are still multiple-position winners, reset finalised state
     useEffect(() => {
         if (multiWinners.length > 0) {
-            setFinalised(false);
+            Promise.resolve().then(() => setFinalised(false));
         }
     }, [multiWinners.length]);
 
@@ -129,7 +129,7 @@ export default function Results({ electionId }: ResultsProps) {
             }
         }
         if (hasChanges) {
-            setWinnerSelections(newSelections);
+            Promise.resolve().then(() => setWinnerSelections(newSelections));
         }
     }, [multiWinners, results, winnerSelections]);
 
@@ -173,9 +173,9 @@ export default function Results({ electionId }: ResultsProps) {
                     );
                 }
             }
-            setWarnings(newWarnings);
+            Promise.resolve().then(() => setWarnings(newWarnings));
         } else {
-            setWarnings([]);
+            Promise.resolve().then(() => setWarnings([]));
         }
     }, [winnerSelections, multiWinners, results]);
 

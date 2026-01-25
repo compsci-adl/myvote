@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 
 const mockNextResponseJson_results = jest.fn((body: any, init?: any) => ({ body, init }));
 
