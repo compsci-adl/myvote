@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 const mockNextResponseJson_membership = jest.fn((body: any, init?: any) => ({ body, init }));
 
 jest.mock('next/server', () => ({

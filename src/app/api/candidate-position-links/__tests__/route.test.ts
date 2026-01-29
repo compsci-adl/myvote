@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 // Mocks must be defined before importing the route module so the module picks them up
 const mockNextResponseJson = jest.fn((body: any, init?: any) => ({ body, init }));
 

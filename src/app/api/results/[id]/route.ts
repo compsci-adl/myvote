@@ -190,7 +190,7 @@ export async function GET(req: NextRequest) {
 
     // Remove ballots, candidateIds from output
     const results: ResultPosition[] = Object.values(grouped).map(
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+         
         ({ ballots, candidateIds, ...rest }) => rest
     );
     return NextResponse.json({ results }, { status: 200 });
@@ -466,7 +466,7 @@ export async function POST(req: NextRequest) {
 
     // Remove ballots, candidateIds from output
     const results: ResultPosition[] = Object.values(grouped).map(
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+         
         ({ ballots, candidateIds, ...rest }) => rest
     );
     return NextResponse.json({ results }, { status: 200 });

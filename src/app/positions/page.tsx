@@ -47,11 +47,15 @@ export default function PositionsPage() {
                 },
                 {}
             );
-            setPositions(positionMap);
-            setLoading(false);
+                Promise.resolve().then(() => {
+                    setPositions(positionMap);
+                    setLoading(false);
+                });
         } else if (positionsData && positionsData.message) {
-            setMessage(positionsData.message);
-            setLoading(false);
+                Promise.resolve().then(() => {
+                    setMessage(positionsData.message);
+                    setLoading(false);
+                });
         }
     }, [positionsData]);
 

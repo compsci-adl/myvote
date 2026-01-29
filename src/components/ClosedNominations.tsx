@@ -53,7 +53,7 @@ export default function ClosedNominations({ electionId, setSliderValue }: Closed
                 map.set(nom.name, nom);
             }
         });
-        setMergedNominations(Array.from(map.values()));
+        Promise.resolve().then(() => setMergedNominations(Array.from(map.values())));
     }, [nonExecNominations, execNominations]);
 
     function handleNonExecUpload(event: React.ChangeEvent<HTMLInputElement>) {

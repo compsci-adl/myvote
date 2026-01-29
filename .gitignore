@@ -53,3 +53,5 @@ dev.sqlite
 dev_member.sqlite
 
 /drizzle
+
+*.csv

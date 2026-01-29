@@ -28,7 +28,9 @@ import type { Election } from '@/types/election';
 export default function AdminPage() {
     const { data: session } = useSession();
     const r = useRef(new Map());
-    setRefs(r);
+    useEffect(() => {
+        setRefs(r);
+    }, []);
 
     const [sliderValue, setSliderValue] = useState(0);
     const [modalMessage, setModalMessage] = useState('');
