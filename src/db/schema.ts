@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { blob, integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { blob, integer, primaryKey, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
 
 export const electionStatusEnum = [
     'PreRelease',
@@ -39,15 +39,22 @@ export const candidatePositionLinks = sqliteTable(
     (table) => [primaryKey({ columns: [table.candidate_id, table.position_id] })]
 );
 
-export const candidates = sqliteTable('candidate', {
-    id: text('id').primaryKey(),
-    election: text('election')
-        .notNull()
-        .references(() => elections.id),
-    name: text('name').notNull(),
-    statement: text('statement'),
-    avatar: text('avatar'),
-});
+export const candidates = sqliteTable(
+    'candidate',
+    {
+        id: text('id').primaryKey(),
+        election: text('election')
+            .notNull()
+            .references(() => elections.id),
+        name: text('name').notNull(),
+        statement: text('statement'),
+        avatar: text('avatar'),
+    },
+    (table) => ({
+        // Ensure only one candidate per name per election
+        nameElectionUnique: unique().on(table.name, table.election),
+    })
+);
 
 export const positions = sqliteTable('position', {
     id: text('id').primaryKey(),

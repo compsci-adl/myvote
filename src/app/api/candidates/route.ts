@@ -121,6 +121,10 @@ export async function POST(req: NextRequest) {
                 name: candidateData.name,
                 election: election_id,
             })
+            .onConflictDoUpdate({
+                target: [candidates.name, candidates.election], // Requires a unique index in schema.ts
+                set: { name: candidateData.name } 
+            })
             .returning();
         insertedCandidates.push({ id: candidate.id, name: candidate.name });
         // Insert candidate-position-link rows for nominations
