@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { auth } from '@/auth';
@@ -45,7 +45,6 @@ export async function POST(req: NextRequest) {
                             )
                         )
                         .limit(1);
-
                     if (existing && existing.length > 0) {
                         // Update existing candidate's statement
                         const updated = await db
@@ -53,7 +52,7 @@ export async function POST(req: NextRequest) {
                             .set({
                                 statement: candidate.statement || existing[0].statement,
                             })
-                            .where(sql`name = ${candidate.name} AND election = ${election_id}`)
+                            .where(eq(candidates.id, existing[0].id))
                             .returning();
                         allResults.push(updated[0] || existing[0]);
                     } else {
