@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { auth } from '@/auth';
@@ -6,7 +6,7 @@ import { db } from '@/db/index';
 import { candidates } from '@/db/schema';
 
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest) {  
     const session = await auth();
     if (!session?.user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -35,12 +35,14 @@ export async function POST(req: NextRequest) {
             for (const candidate of batch) {
                 try {
                     // Try to find existing candidate by name and election
-                    const { eq } = await import('drizzle-orm');
                     const existing = await db
                         .select()
                         .from(candidates)
                         .where(
-                            sql`name = ${candidate.name} AND election = ${election_id}`
+                            and(
+                                eq(candidates.name, candidate.name),
+                                eq(candidates.election, election_id)
+                            )
                         )
                         .limit(1);
 
@@ -70,12 +72,14 @@ export async function POST(req: NextRequest) {
                 } catch (err) {
                     // If error is due to unique constraint, fetch and return existing
                     if (String(err).includes('UNIQUE')) {
-                        const { eq } = await import('drizzle-orm');
                         const existing = await db
                             .select()
                             .from(candidates)
                             .where(
-                                sql`name = ${candidate.name} AND election = ${election_id}`
+                                and(
+                                    eq(candidates.name, candidate.name),
+                                    eq(candidates.election, election_id)
+                                )   
                             )
                             .limit(1);
                         if (existing && existing.length > 0) {

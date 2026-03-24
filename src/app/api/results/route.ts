@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
             })
             .from(ballots)
             .innerJoin(positions, eq(ballots.position, positions.id))
-            .where(eq(positions.election_id, election_id));
+            .where(eq(positions.election, election_id));
         // Only return minimal result info
         const safeData = data.map(({ ballot, position }) => ({
             ballot_id: ballot.id,
