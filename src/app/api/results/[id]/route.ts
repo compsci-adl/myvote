@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
         })
         .from(ballots)
         .innerJoin(positions, eq(ballots.position, positions.id))
-        .where(eq(positions.election_id, election_id));
+        .where(eq(positions.election, election_id));
 
     // Get all candidates for this election
     const allCandidates = await db
@@ -216,7 +216,7 @@ export async function POST(req: NextRequest) {
         })
         .from(ballots)
         .innerJoin(positions, eq(ballots.position, positions.id))
-        .where(eq(positions.election_id, election_id));
+        .where(eq(positions.election, election_id));
 
     // Get all candidates for this election
     const allCandidates = await db

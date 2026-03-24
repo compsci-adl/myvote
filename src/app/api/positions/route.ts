@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
         const data = await db
             .select()
             .from(positions)
-            .where(eq(positions.election_id, election_id));
+            .where(eq(positions.election, election_id));
         // Only return minimal position info
         const positionInfo = data.map(({ id, name, description, vacancies, executive }) => ({
             id,
@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
                 vacancies,
                 description,
                 executive,
-                election_id: election_id,
+                election: election_id,
             })
             .returning();
 

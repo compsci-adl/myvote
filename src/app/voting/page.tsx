@@ -254,8 +254,11 @@ export default function VotingPage() {
                     if (!grouped[posId]) {
                         grouped[posId] = [];
                     }
-                    const pos = positions.find((p) => String(p.id) === String(posId));
-                    grouped[posId].push({ ...candidate, executive: pos?.executive });
+                    // Prevent duplicate candidates in the same position
+                    if (!grouped[posId].some((c) => c.id === candidate.id)) {
+                        const pos = positions.find((p) => String(p.id) === String(posId));
+                        grouped[posId].push({ ...candidate, executive: pos?.executive });
+                    }
                 }
             }
             // Shuffle candidates for each position or use saved order

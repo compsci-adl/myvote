@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { auth } from '@/auth';
 import { db } from '@/db/index';
-import { candidatePositionLinks, candidates } from '@/db/schema';
+import { candidatePositionLinks, candidates, positions } from '@/db/schema';
 import { SERVER_CACHE_TTL } from '@/lib/cache-config';
 import { serverCache, serverCacheKeys } from '@/lib/server-cache';
 import { isMember } from '@/utils/is-member';
@@ -51,6 +51,21 @@ export async function GET(req: NextRequest) {
             );
         }
 
+        // Fetch relevant position rows so we can enforce election matching
+        const positionRows = await db
+            .select({
+                id: positions.id,
+                election_id: positions.election,
+            })
+            .from(positions)
+            .where(inArray(positions.id, positionIds));
+        const positionElectionMap = new Map<string, string>();
+        for (const pos of positionRows) {
+            if (pos.id && pos.election_id) {
+                positionElectionMap.set(String(pos.id), String(pos.election_id));
+            }
+        }
+
         // Fetch all links for all positions in one go
         const links = await db
             .select()
@@ -70,29 +85,59 @@ export async function GET(req: NextRequest) {
                     id: candidates.id,
                     name: candidates.name,
                     statement: candidates.statement,
+                    election: candidates.election,
                 })
                 .from(candidates)
                 .where(inArray(candidates.id, candidateIds));
         }
         // Map candidates by id for quick lookup
-        const candidateMap = new Map<string, Record<string, unknown>>();
+        const candidateMap = new Map<
+            string,
+            { id: string; name: string; statement: string; election: string }
+        >();
         for (const cand of candidatesList) {
-            const candidate = cand as { id: string; name: string; statement: string };
+            const candidate = cand as {
+                id: string;
+                name: string;
+                statement: string;
+                election: string;
+            };
             candidateMap.set(String(candidate.id), {
                 id: candidate.id,
                 name: candidate.name,
                 statement: candidate.statement,
+                election: candidate.election,
             });
         }
 
-        // Build response
+        // Build response (ensure candidate belongs to the same election as the position)
         const allLinks = links
-            .filter((link) => link.candidate_id && candidateMap.has(String(link.candidate_id)))
-            .map((link) => ({
-                candidate_id: link.candidate_id,
-                position_id: link.position_id,
-                candidate: candidateMap.get(String(link.candidate_id)),
-            }));
+            .filter((link) => {
+                if (!link.candidate_id || !link.position_id) return false;
+                const candidate = candidateMap.get(String(link.candidate_id));
+                const electionId = positionElectionMap.get(String(link.position_id));
+                return (
+                    candidate !== undefined &&
+                    electionId !== undefined &&
+                    candidate.election === electionId
+                );
+            })
+            .map((link) => {
+                // 1. Look up the candidate exactly ONE time
+                const foundCandidate = candidateMap.get(String(link.candidate_id));
+
+                // 2. Return the cleanly constructed object
+                return {
+                    candidate_id: link.candidate_id,
+                    position_id: link.position_id,
+                    candidate: {
+                        // Use optional chaining with a fallback instead of 'as string'
+                        id: foundCandidate?.id ?? '',
+                        name: foundCandidate?.name ?? '',
+                        statement: foundCandidate?.statement ?? '',
+                    },
+                };
+            });
 
         // Cache the result
         serverCache.set(cacheKey, allLinks, SERVER_CACHE_TTL.CANDIDATE_POSITION_LINKS);
@@ -135,32 +180,54 @@ export async function GET(req: NextRequest) {
         }
 
         try {
+            // Resolve position and election for safety
+            const positionRow = await db
+                .select({ id: positions.id, election_id: positions.election })
+                .from(positions)
+                .where(eq(positions.id, position_id));
+            const positionElectionId =
+                Array.isArray(positionRow) && positionRow.length > 0
+                    ? String((positionRow[0] as { election_id: string }).election_id)
+                    : null;
+            if (!positionElectionId) {
+                return NextResponse.json({ error: 'Position not found' }, { status: 404 });
+            }
+
             // Get all candidate-position-links for this position
             const links = await db
                 .select()
                 .from(candidatePositionLinks)
                 .where(eq(candidatePositionLinks.position_id, position_id));
 
-            // For each link, get the candidate info
+            // For each link, get the candidate info (and only include matching election)
             const candidatesForLinks = [];
             for (const link of links) {
                 if (!link.candidate_id) continue;
-                const candidate = await db
+                const candidateResult = await db
                     .select({
                         id: candidates.id,
                         name: candidates.name,
                         statement: candidates.statement,
+                        election: candidates.election,
                     })
                     .from(candidates)
                     .where(eq(candidates.id, String(link.candidate_id)));
-                if (candidate && candidate.length > 0) {
+                if (candidateResult && candidateResult.length > 0) {
+                    const candidate = candidateResult[0] as {
+                        id: string;
+                        name: string;
+                        statement: string;
+                        election: string;
+                    };
+                    if (candidate.election !== positionElectionId) continue;
+
                     candidatesForLinks.push({
                         candidate_id: link.candidate_id,
                         position_id: link.position_id,
                         candidate: {
-                            id: candidate[0].id,
-                            name: candidate[0].name,
-                            statement: candidate[0].statement,
+                            id: candidate.id,
+                            name: candidate.name,
+                            statement: candidate.statement,
                         },
                     });
                 }
@@ -229,15 +296,18 @@ export async function POST(req: NextRequest) {
                 candidate_id: body.candidate_id,
                 position_id: body.position_id,
             })
+            .onConflictDoNothing()
             .returning();
 
         const link = Array.isArray(insertResult) ? insertResult[0] : insertResult;
         if (!link) {
+            // If link is undefined, it means the database blocked a duplicate
             return NextResponse.json(
-                { error: 'Failed to create candidate-position-link' },
-                { status: 500 }
+                { message: 'Link already exists' }, 
+                { status: 200 } 
             );
         }
+        
         return NextResponse.json(link, { status: 201 });
     } catch (error) {
         console.error('Candidate-position-links POST error:', error);

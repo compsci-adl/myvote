@@ -1,4 +1,4 @@
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { auth } from '@/auth';
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
         const positionRows = await db
             .select()
             .from(positions)
-            .where(eq(positions.election_id, election_id));
+            .where(eq(positions.election, election_id));
         const positionIds = positionRows.map((p) => p.id);
         // Get all links for these positions
         const links =
@@ -114,14 +114,31 @@ export async function POST(req: NextRequest) {
             candidateData.id && typeof candidateData.id === 'string' && candidateData.id.length > 3
                 ? candidateData.id
                 : crypto.randomUUID();
-        const [candidate] = await db
+        const insertedResult = await db
             .insert(candidates)
             .values({
                 id: candidateId,
                 name: candidateData.name,
                 election: election_id,
             })
+            .onConflictDoNothing({
+                target: [candidates.name, candidates.election]
+            })
             .returning();
+        let candidate = insertedResult[0];
+        // If there is a duplicate, fetch the existing one
+        if (!candidate) {
+            const existing = await db
+                .select()
+                .from(candidates)
+                .where(
+                    and(
+                        eq(candidates.name, candidateData.name),
+                        eq(candidates.election, election_id)
+                    )
+                );
+            candidate = existing[0];
+        }
         insertedCandidates.push({ id: candidate.id, name: candidate.name });
         // Insert candidate-position-link rows for nominations
         if (Array.isArray(candidateData.nominations) && candidateData.nominations.length > 0) {
@@ -135,7 +152,7 @@ export async function POST(req: NextRequest) {
                     position_id,
                 }));
             if (linksToInsert.length > 0) {
-                await db.insert(candidatePositionLinks).values(linksToInsert);
+                await db.insert(candidatePositionLinks).values(linksToInsert).onConflictDoNothing();
             }
         }
     }
