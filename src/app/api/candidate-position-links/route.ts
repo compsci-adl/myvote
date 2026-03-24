@@ -122,15 +122,22 @@ export async function GET(req: NextRequest) {
                     candidate.election === electionId
                 );
             })
-            .map((link) => ({
-                candidate_id: link.candidate_id,
-                position_id: link.position_id,
-                candidate: {
-                    id: candidateMap.get(String(link.candidate_id))?.id as string,
-                    name: candidateMap.get(String(link.candidate_id))?.name as string,
-                    statement: candidateMap.get(String(link.candidate_id))?.statement as string,
-                },
-            }));
+            .map((link) => {
+                // 1. Look up the candidate exactly ONE time
+                const foundCandidate = candidateMap.get(String(link.candidate_id));
+
+                // 2. Return the cleanly constructed object
+                return {
+                    candidate_id: link.candidate_id,
+                    position_id: link.position_id,
+                    candidate: {
+                        // Use optional chaining with a fallback instead of 'as string'
+                        id: foundCandidate?.id ?? '',
+                        name: foundCandidate?.name ?? '',
+                        statement: foundCandidate?.statement ?? '',
+                    },
+                };
+            });
 
         // Cache the result
         serverCache.set(cacheKey, allLinks, SERVER_CACHE_TTL.CANDIDATE_POSITION_LINKS);
@@ -289,15 +296,18 @@ export async function POST(req: NextRequest) {
                 candidate_id: body.candidate_id,
                 position_id: body.position_id,
             })
+            .onConflictDoNothing()
             .returning();
 
         const link = Array.isArray(insertResult) ? insertResult[0] : insertResult;
         if (!link) {
+            // If link is undefined, it means the database blocked a duplicate
             return NextResponse.json(
-                { error: 'Failed to create candidate-position-link' },
-                { status: 500 }
+                { message: 'Link already exists' }, 
+                { status: 200 } 
             );
         }
+        
         return NextResponse.json(link, { status: 201 });
     } catch (error) {
         console.error('Candidate-position-links POST error:', error);
