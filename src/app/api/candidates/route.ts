@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
         const positionRows = await db
             .select()
             .from(positions)
-            .where(eq(positions.election_id, election_id));
+            .where(eq(positions.election, election_id));
         const positionIds = positionRows.map((p) => p.id);
         // Get all links for these positions
         const links =

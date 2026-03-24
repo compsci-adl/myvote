@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
         const positionRows = await db
             .select({
                 id: positions.id,
-                election_id: positions.election_id,
+                election_id: positions.election,
             })
             .from(positions)
             .where(inArray(positions.id, positionIds));
@@ -175,7 +175,7 @@ export async function GET(req: NextRequest) {
         try {
             // Resolve position and election for safety
             const positionRow = await db
-                .select({ id: positions.id, election_id: positions.election_id })
+                .select({ id: positions.id, election_id: positions.election })
                 .from(positions)
                 .where(eq(positions.id, position_id));
             const positionElectionId =

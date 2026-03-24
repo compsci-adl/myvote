@@ -24,7 +24,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
         .from(positions)
         .where(eq(positions.id, body.position))
         .then((rows) => rows[0]);
-    if (!pos || pos.election_id !== election_id) {
+    if (!pos || pos.election !== election_id) {
         return NextResponse.json(
             { error: 'Position does not belong to election' },
             { status: 400 }

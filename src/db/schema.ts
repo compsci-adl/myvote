@@ -58,7 +58,7 @@ export const candidates = sqliteTable(
 
 export const positions = sqliteTable('position', {
     id: text('id').primaryKey(),
-    election_id: text('election_id')
+    election: text('election')
         .notNull()
         .references(() => elections.id),
     name: text('name').notNull(),

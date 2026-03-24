@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     if (!election_id) {
         return NextResponse.json({ error: 'Missing election_id' }, { status: 400 });
     }
-    const data = await db.select().from(positions).where(eq(positions.election_id, election_id));
+    const data = await db.select().from(positions).where(eq(positions.election, election_id));
     if (!data || data.length === 0) {
         return NextResponse.json({ error: 'No positions found for election' }, { status: 404 });
     }
