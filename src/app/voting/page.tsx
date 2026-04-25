@@ -11,7 +11,7 @@ import {
     useDisclosure,
 } from '@heroui/react';
 import { useSession } from 'next-auth/react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import useSWR from 'swr';
 import useSWRMutation from 'swr/mutation';
 
@@ -27,12 +27,77 @@ export default function VotingPage() {
     const { data: session } = useSession();
     const { isOpen, onOpen, onClose } = useDisclosure();
 
-    const [firstElection, setFirstElection] = useState<{ id: number; status: number } | null>(null);
-    const [positions, setPositions] = useState<Position[]>([]);
-    const [message, setMessage] = useState('');
     const [statusMessage, setStatusMessage] = useState<string>('');
     const [candidates, setCandidates] = useState<Record<string, Candidate[]>>({});
-    const [candidatesLoading, setCandidatesLoading] = useState(true);
+    const [isMemberOverride, setIsMemberOverride] = useState<boolean | null>(null);
+    const [hasVotedOverride, setHasVotedOverride] = useState<boolean | null>(null);
+
+    // Get student info from session
+    const keycloakId = session?.user?.id;
+    const studentName = session?.user?.name;
+
+    // Shared SWR fetcher
+    const swrFetcher = async (url: string) => fetch(url).then((res) => res.json());
+
+    // Fetch membership info using hook
+    const { data: membershipData } = useSWR(
+        keycloakId ? `/api/membership?keycloak_id=${keycloakId}` : null,
+        swrFetcher,
+        SWR_CONFIG
+    );
+
+    const studentId = useMemo<string | null | undefined>(() => {
+        if (!membershipData) {
+            return undefined;
+        }
+        if (Array.isArray(membershipData) && membershipData.length > 0) {
+            return membershipData[0].studentId ?? null;
+        }
+        if (membershipData && typeof membershipData === 'object' && 'error' in membershipData) {
+            return null;
+        }
+        return null;
+    }, [membershipData]);
+
+    // Keep alerts as side-effects, but derive studentId from data.
+    useEffect(() => {
+        if (membershipData && Array.isArray(membershipData) && membershipData.length > 0) {
+            if (!membershipData[0].studentId) {
+                alert(
+                    'Error: No student ID found for your account. Please ensure you have added your student number to your profile on the CS Club website and try again.'
+                );
+            }
+        } else if (membershipData && membershipData.error) {
+            alert(
+                'Error: Unable to fetch your student ID. Please ensure you have added your student number to your profile on the CS Club website and try again.'
+            );
+        }
+    }, [membershipData]);
+
+    const derivedIsMember = useMemo<boolean | null>(() => {
+        if (!membershipData) {
+            return null;
+        }
+        return Array.isArray(membershipData) && membershipData.length > 0;
+    }, [membershipData]);
+    const isMember = isMemberOverride ?? derivedIsMember;
+
+    // Fetch election data with proper SWR caching
+    const { data: electionsData, isLoading: electionsLoading } = useSWR(
+        '/api/elections',
+        swrFetcher,
+        SWR_CONFIG
+    );
+
+    const firstElection = useMemo<{ id: number; status: number } | null>(() => {
+        if (electionsData && electionsData.length > 0) {
+            const votingElection = electionsData.find(
+                (e: { status: string | number }) => e.status === 'Voting' || e.status === 3
+            );
+            return votingElection ?? null;
+        }
+        return null;
+    }, [electionsData]);
 
     // Update localStorage when voting order changes
     const setCandidatesWithStorage = useCallback<
@@ -53,84 +118,19 @@ export default function VotingPage() {
                 return newCandidates;
             });
         },
-        [firstElection?.id]
+        [firstElection]
     );
-
-    // Get student info from session
-    const keycloakId = session?.user?.id;
-    const studentName = session?.user?.name;
-    const [studentId, setStudentId] = useState<string | null | undefined>(undefined);
-
-    // Shared SWR fetcher
-    const swrFetcher = async (url: string) => fetch(url).then((res) => res.json());
-
-    // Fetch membership info using hook
-    const { data: membershipData } = useSWR(
-        keycloakId ? `/api/membership?keycloak_id=${keycloakId}` : null,
-        swrFetcher,
-        SWR_CONFIG
-    );
-
-    // Get student info from session
-    useEffect(() => {
-        if (membershipData && Array.isArray(membershipData) && membershipData.length > 0) {
-            if (membershipData[0].studentId) {
-                setStudentId(membershipData[0].studentId);
-            } else {
-                setStudentId(null);
-                alert(
-                    'Error: No student ID found for your account. Please ensure you have added your student number to your profile on the CS Club website and try again.'
-                );
-            }
-        } else if (membershipData && membershipData.error) {
-            setStudentId(null);
-            alert(
-                'Error: Unable to fetch your student ID. Please ensure you have added your student number to your profile on the CS Club website and try again.'
-            );
-        }
-    }, [membershipData]);
-
-    // Membership and vote status state
-    const [isMember, setIsMember] = useState<boolean | null>(null);
-    const [hasVoted, setHasVoted] = useState<boolean | null>(null);
-
-    // Fetch election data with proper SWR caching
-    const { data: electionsData, isLoading: electionsLoading } = useSWR(
-        '/api/elections',
-        swrFetcher,
-        SWR_CONFIG
-    );
-
-    // Update isMember based on membershipData
-    useEffect(() => {
-        if (membershipData && Array.isArray(membershipData) && membershipData.length > 0) {
-            setIsMember(true);
-        } else {
-            setIsMember(false);
-        }
-    }, [membershipData]);
 
     // Check if user has already voted for this election using hook
     const { data: votesData } = useVotes(firstElection?.id, studentId);
 
-    useEffect(() => {
+    const derivedHasVoted = useMemo<boolean | null>(() => {
         if (votesData && typeof votesData === 'object' && 'voted' in votesData) {
-            setHasVoted((votesData as { voted: boolean }).voted);
+            return (votesData as { voted: boolean }).voted;
         }
+        return null;
     }, [votesData]);
-
-    useEffect(() => {
-        if (electionsData && electionsData.length > 0) {
-            const votingElection = electionsData.find(
-                (e: { status: string | number }) => e.status === 'Voting' || e.status === 3
-            );
-            if (votingElection) {
-                setFirstElection(votingElection);
-            } else {
-                setFirstElection(null);
-            }
-        }
-    }, [electionsData]);
+    const hasVoted = hasVotedOverride ?? derivedHasVoted;
 
     // Fetch positions for the first election, but only if studentId is present
     const { data: positionsData } = useSWR(
@@ -139,19 +139,12 @@ export default function VotingPage() {
             : null,
         swrFetcher
     );
-    useEffect(() => {
-        if (studentId === null) return;
+    const positions = useMemo<Position[]>(() => {
         if (positionsData && Array.isArray(positionsData.positions)) {
-            setPositions(positionsData.positions);
+            return positionsData.positions;
         }
-        if (!positionsData) {
-            setCandidatesLoading(true);
-        }
-    }, [positionsData, studentId]);
-
-    useEffect(() => {
-        setCandidatesLoading(true);
-    }, []);
+        return [];
+    }, [positionsData]);
 
     // Determine if user can edit vote (while status is Voting)
     const canEditVote =
@@ -160,22 +153,25 @@ export default function VotingPage() {
         ((typeof firstElection.status === 'string' &&
             String(firstElection.status).toLowerCase() === 'voting') ||
             firstElection.status === 3);
-    useEffect(() => {
-        if (electionsLoading) return;
+    const message = useMemo(() => {
+        if (electionsLoading) return '';
         if (!firstElection) {
-            setMessage('No open elections available.');
-        } else if (firstElection.status < 3) {
-            setMessage("Voting hasn't opened yet.");
-        } else if (firstElection.status > 3) {
-            setMessage('Voting has closed.');
-        } else if (isMember === false) {
-            setMessage('You must be a paid CS club member to vote.');
-        } else if (hasVoted && !canEditVote) {
-            setMessage('You have already voted.');
-        } else {
-            setMessage('');
+            return 'No open elections available.';
         }
-    }, [firstElection, electionsLoading, isMember, hasVoted, canEditVote]);
+        if (firstElection.status < 3) {
+            return "Voting hasn't opened yet.";
+        }
+        if (firstElection.status > 3) {
+            return 'Voting has closed.';
+        }
+        if (isMember === false) {
+            return 'You must be a paid CS club member to vote.';
+        }
+        if (hasVoted && !canEditVote) {
+            return 'You have already voted.';
+        }
+        return '';
+    }, [canEditVote, electionsLoading, firstElection, hasVoted, isMember]);
 
     // Handle submit vote
     const submitVote = useSWRMutation(
@@ -185,7 +181,7 @@ export default function VotingPage() {
             onSuccess: () => {
                 setStatusMessage('Vote submitted successfully!');
                 setTimeout(() => setStatusMessage(''), 5000);
-                setHasVoted(true);
+                setHasVotedOverride(true);
             },
             onError: (error: unknown) => {
                 if (
@@ -197,13 +193,12 @@ export default function VotingPage() {
                 ) {
                     if ((error as { response: { status: number } }).response.status === 409) {
                         setStatusMessage('You have already voted.');
-                        setHasVoted(true);
-                        setMessage('You have already voted.');
+                        setHasVotedOverride(true);
                     } else if (
                         (error as { response: { status: number } }).response.status === 403
                     ) {
                         setStatusMessage('You must be a paid CS club member to vote.');
-                        setIsMember(false);
+                        setIsMemberOverride(false);
                     } else {
                         setStatusMessage('Error submitting vote. Please try again.');
                     }
@@ -220,13 +215,14 @@ export default function VotingPage() {
     const { data: candidateLinksData, isLoading: candidatesIsLoading } =
         useCandidatePositionLinksMultiple(positions.length > 0 ? positionIds : undefined);
 
+    const candidatesLoading = !candidateLinksData || candidatesIsLoading;
+
     useEffect(() => {
         if (studentId === null) return; // Prevent loading if studentId is missing
         if (!firstElection?.id || positions.length === 0) return;
 
         // If still loading candidate data, show skeleton
         if (!candidateLinksData || candidatesIsLoading) {
-            setCandidatesLoading(true);
             return;
         }
 
@@ -238,7 +234,7 @@ export default function VotingPage() {
             candidate_position_links: CandidatePositionLink[];
         };
 
-        try {
+        {
             const data = candidateLinksData as CandidatePositionLinksResponse;
             const grouped: Record<string, Candidate[]> = {};
             if (
@@ -281,10 +277,9 @@ export default function VotingPage() {
             if (Object.keys(updated).length > Object.keys(orders).length) {
                 localStorage.setItem(key, JSON.stringify(updated));
             }
-            setCandidatesWithStorage(shuffled);
-        } finally {
-            // Only hide skeletons if positions are loaded
-            if (positions.length) setCandidatesLoading(false);
+            queueMicrotask(() => {
+                setCandidatesWithStorage(shuffled);
+            });
         }
     }, [
         firstElection,
