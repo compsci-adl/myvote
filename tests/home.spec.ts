@@ -24,19 +24,12 @@ test('home page shows welcome and login button and theme toggle works', async ({
         await expect(welcomeText).toBeVisible();
     }
 
-    // Login button should be visible for unauthenticated users
-    let loginBtn = page.getByRole('button', { name: /Login|Sign In/i });
-    if (!(await loginBtn.count())) {
-        loginBtn = page.getByRole('link', { name: /Login|Sign In/i });
-    }
-    if (!(await loginBtn.count())) {
-        // Fallback: any element with login text
-        loginBtn = page
-            .locator('button, a')
-            .filter({ hasText: /Login|Sign In/i })
-            .first();
-    }
-    await expect(loginBtn).toBeVisible();
+    // Auth controls can be either Login (unauthenticated) or Logout (authenticated).
+    const authBtn = page
+        .locator('button, a')
+        .filter({ hasText: /Login|Sign In|Logout|Sign Out/i })
+        .first();
+    await expect(authBtn).toBeVisible();
 
     // Theme toggle button
     const themeBtn = page
@@ -67,18 +60,16 @@ test('home page shows welcome and login button and theme toggle works', async ({
         await page.waitForTimeout(500);
     }
 
-    // Read current theme marker and click the toggle, then assert it changed
+    // Toggle theme and assert the html dark-class flips.
     if (!skipThemeTest) {
-        const beforeBtnText = await btn.textContent();
+        const html = page.locator('html');
+        const wasDark = await html.evaluate((node) => node.classList.contains('dark'));
         // Close any open modals before clicking
         await page.keyboard.press('Escape');
         await page.waitForTimeout(500);
-        await btn.click({ force: true });
-        // Wait for the button text to change to the opposite emoji
-        const expectedText = beforeBtnText === '🌞' ? '🌚' : '🌞';
-        await expect(btn).toHaveText(expectedText);
-        const afterBtnText = await btn.textContent();
-        // The button text should have changed
-        expect(afterBtnText).toBe(expectedText);
+        await btn.click();
+        await expect
+            .poll(async () => html.evaluate((node) => node.classList.contains('dark')))
+            .toBe(!wasDark);
     }
 });
