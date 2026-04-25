@@ -32,16 +32,10 @@ export const Header = () => {
     const { data: session, status } = useSession();
     const [isPaidMember, setIsPaidMember] = useState(false);
     const [membershipLoaded, setMembershipLoaded] = useState(false);
-    const [mounted, setMounted] = useState(false);
-    const [feedbackUrl, setFeedbackUrl] = useState<string | undefined>();
     const router = useRouter();
     const pathname = usePathname();
     const openHelpModal = useHelpModal((s) => s.open);
-
-    useEffect(() => {
-        setMounted(true);
-        setFeedbackUrl(env.NEXT_PUBLIC_FEEDBACK_FORM_URL);
-    }, []);
+    const feedbackUrl = env.NEXT_PUBLIC_FEEDBACK_FORM_URL;
 
     const isActive = (path: string) => pathname === path;
 
@@ -119,21 +113,19 @@ export const Header = () => {
                             </Button>
                         </Tooltip>
                     </NavbarItem>
-                    {mounted && (
-                        <NavbarItem>
-                            <Tooltip content="Send Feedback" size="sm">
-                                <Button
-                                    {...HEADER_BUTTON_PROPS}
-                                    as="a"
-                                    href={feedbackUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                >
-                                    🗣️
-                                </Button>
-                            </Tooltip>
-                        </NavbarItem>
-                    )}
+                    <NavbarItem>
+                        <Tooltip content="Send Feedback" size="sm">
+                            <Button
+                                {...HEADER_BUTTON_PROPS}
+                                as="a"
+                                href={feedbackUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                🗣️
+                            </Button>
+                        </Tooltip>
+                    </NavbarItem>
                     <NavbarItem>
                         <Tooltip content="Toggle Dark Mode" size="sm">
                             <Button
@@ -141,7 +133,9 @@ export const Header = () => {
                                 onPress={toggleTheme}
                                 data-testid="theme-toggle"
                             >
-                                {mounted ? (theme === 'dark' ? '🌚' : '🌞') : '🌞'}
+                                <span suppressHydrationWarning>
+                                    {theme === 'dark' ? '🌚' : '🌞'}
+                                </span>
                             </Button>
                         </Tooltip>
                     </NavbarItem>

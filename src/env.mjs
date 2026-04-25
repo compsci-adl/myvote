@@ -17,6 +17,7 @@ export const env = createEnv({
     },
     client: {
         NEXT_PUBLIC_FEEDBACK_FORM_URL: z.string().url().min(1).optional(),
+        NEXT_PUBLIC_UMAMI_WEBSITE_ID: z.string().min(1).optional(),
     },
     experimental__runtimeEnv: {
         NEXTAUTH_URL: process.env.NEXTAUTH_URL,
@@ -29,6 +30,7 @@ export const env = createEnv({
         MEMBER_DATABASE_URL: process.env.MEMBER_DATABASE_URL,
         MEMBER_DATABASE_AUTH_TOKEN: process.env.MEMBER_DATABASE_AUTH_TOKEN,
         NEXT_PUBLIC_FEEDBACK_FORM_URL: process.env.NEXT_PUBLIC_FEEDBACK_FORM_URL,
+        NEXT_PUBLIC_UMAMI_WEBSITE_ID: process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID,
     },
     skipValidation: process.env.SKIP_ENV_VALIDATION,
 });
