@@ -7,10 +7,15 @@ on:
 env:
   AWS_REGION: ap-southeast-2
 
+permissions:
+  contents: read
+
 jobs:
   lint:
     name: Linting Checks
     uses: ./.github/workflows/lint.yml
+    permissions:
+      contents: read
 
   build:
     needs: lint
@@ -72,6 +77,8 @@ jobs:
     needs: build
     name: Deploy
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     environment: Production
     steps:
       - name: Deploy on EC2
