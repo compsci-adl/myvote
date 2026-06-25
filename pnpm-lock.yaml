@@ -54,16 +54,16 @@ importers:
         specifier: ^2.4.26
         version: 2.4.26(tailwindcss@4.3.1)
       '@internationalized/date':
-        specifier: ^3.12.1
+        specifier: ^3.12.2
         version: 3.12.2
       '@libsql/client':
-        specifier: ^0.17.3
+        specifier: ^0.17.4
         version: 0.17.4
       '@react-aria/ssr':
-        specifier: ^3.10.0
+        specifier: ^3.10.1
         version: 3.10.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@react-aria/visually-hidden':
-        specifier: ^3.9.0
+        specifier: ^3.9.1
         version: 3.9.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@t3-oss/env-nextjs':
         specifier: ^0.13.11
@@ -72,7 +72,7 @@ importers:
         specifier: ^5.5.2
         version: 5.5.2
       better-sqlite3:
-        specifier: ^12.9.0
+        specifier: ^12.11.1
         version: 12.11.1
       clsx:
         specifier: ^2.1.1
@@ -84,16 +84,16 @@ importers:
         specifier: ^0.45.2
         version: 0.45.2(@libsql/client@0.17.4)(better-sqlite3@12.11.1)
       framer-motion:
-        specifier: ^12.38.0
+        specifier: ^12.41.0
         version: 12.41.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       intl-messageformat:
-        specifier: ^11.2.2
+        specifier: ^11.2.8
         version: 11.2.8
       ky:
         specifier: ^1.14.3
         version: 1.14.3
       next:
-        specifier: ^16.2.6
+        specifier: ^16.2.9
         version: 16.2.9(@babel/core@7.29.7)(@playwright/test@1.61.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       next-auth:
         specifier: 5.0.0-beta.30
@@ -102,35 +102,35 @@ importers:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       papaparse:
-        specifier: ^5.5.3
+        specifier: ^5.5.4
         version: 5.5.4
       react:
-        specifier: ^19.2.5
+        specifier: ^19.2.7
         version: 19.2.7
       react-dom:
-        specifier: ^19.2.5
+        specifier: ^19.2.7
         version: 19.2.7(react@19.2.7)
       react-icons:
         specifier: ^5.6.0
         version: 5.6.0(react@19.2.7)
       swr:
-        specifier: ^2.4.1
+        specifier: ^2.4.2
         version: 2.4.2(react@19.2.7)
       zod:
-        specifier: ^4.3.6
+        specifier: ^4.4.3
         version: 4.4.3
       zustand:
-        specifier: ^5.0.12
+        specifier: ^5.0.14
         version: 5.0.14(@types/react@19.2.9)(react@19.2.7)(use-sync-external-store@1.6.0(react@19.2.7))
     devDependencies:
       '@playwright/test':
-        specifier: ^1.59.1
+        specifier: ^1.61.1
         version: 1.61.1
       '@react-types/shared':
-        specifier: ^3.34.0
+        specifier: ^3.36.0
         version: 3.36.0(react@19.2.7)
       '@tailwindcss/postcss':
-        specifier: ^4.2.4
+        specifier: ^4.3.1
         version: 4.3.1
       '@testing-library/dom':
         specifier: ^10.4.1
@@ -145,7 +145,7 @@ importers:
         specifier: ^30.0.0
         version: 30.0.0
       '@types/node':
-        specifier: ^25.6.0
+        specifier: ^25.9.4
         version: 25.9.4
       '@types/react':
         specifier: 19.2.9
@@ -169,34 +169,34 @@ importers:
         specifier: ^10.1.8
         version: 10.1.8(eslint@9.39.4(jiti@2.7.0))
       eslint-plugin-prettier:
-        specifier: ^5.5.5
+        specifier: ^5.5.6
         version: 5.5.6(eslint-config-prettier@10.1.8(eslint@9.39.4(jiti@2.7.0)))(eslint@9.39.4(jiti@2.7.0))(prettier@3.8.4)
       globals:
-        specifier: ^17.5.0
+        specifier: ^17.7.0
         version: 17.7.0
       jest:
-        specifier: ^30.3.0
+        specifier: ^30.4.2
         version: 30.4.2(@types/node@25.9.4)(ts-node@10.9.2(@types/node@25.9.4)(typescript@5.9.3))
       jest-environment-jsdom:
-        specifier: ^30.3.0
+        specifier: ^30.4.1
         version: 30.4.1
       postcss:
-        specifier: ^8.5.10
+        specifier: ^8.5.15
         version: 8.5.15
       prettier:
-        specifier: ^3.8.3
+        specifier: ^3.8.4
         version: 3.8.4
       prettier-plugin-tailwindcss:
-        specifier: ^0.7.3
+        specifier: ^0.7.4
         version: 0.7.4(prettier@3.8.4)
       tailwind-variants:
         specifier: ^3.2.2
         version: 3.2.2(tailwind-merge@3.4.0)(tailwindcss@4.3.1)
       tailwindcss:
-        specifier: ^4.2.4
+        specifier: ^4.3.1
         version: 4.3.1
       ts-jest:
-        specifier: ^29.4.9
+        specifier: ^29.4.11
         version: 29.4.11(@babel/core@7.29.7)(@jest/transform@30.4.1)(@jest/types@30.4.1)(babel-jest@30.4.1(@babel/core@7.29.7))(jest-util@30.4.1)(jest@30.4.2(@types/node@25.9.4)(ts-node@10.9.2(@types/node@25.9.4)(typescript@5.9.3)))(typescript@5.9.3)
       ts-node:
         specifier: ^10.9.2
