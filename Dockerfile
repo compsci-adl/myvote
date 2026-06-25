@@ -15,7 +15,7 @@ ENV SKIP_ENV_VALIDATION=true
 WORKDIR /app
 
 COPY --from=deps /tmp ./
-COPY pnpm-lock.yaml ./
+COPY pnpm-lock.yaml pnpm-workspace.yaml ./
 
 RUN npm install -g pnpm@11 \
     && pnpm install --frozen-lockfile
