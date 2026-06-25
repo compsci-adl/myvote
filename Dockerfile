@@ -18,7 +18,7 @@ COPY --from=deps /tmp ./
 COPY pnpm-lock.yaml ./
 
 RUN npm install -g pnpm@11 \
-    && pnpm install
+    && pnpm install --frozen-lockfile
 
 COPY . .
 
