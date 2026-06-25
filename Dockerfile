@@ -17,7 +17,7 @@ WORKDIR /app
 COPY --from=deps /tmp ./
 COPY pnpm-lock.yaml ./
 
-RUN npm install -g pnpm@10 \
+RUN npm install -g pnpm@11 \
     && pnpm install
 
 COPY . .
@@ -31,7 +31,7 @@ ENV PNPM_HOME="/root/.local/share/pnpm"
 ENV PATH="${PATH}:${PNPM_HOME}"
 ENV NODE_ENV=production
 
-RUN npm install -g pnpm@10
+RUN npm install -g pnpm@11
 
 WORKDIR /app
 
