@@ -15,10 +15,10 @@ ENV SKIP_ENV_VALIDATION=true
 WORKDIR /app
 
 COPY --from=deps /tmp ./
-COPY pnpm-lock.yaml ./
+COPY pnpm-lock.yaml pnpm-workspace.yaml ./
 
-RUN npm install -g pnpm@10 \
-    && pnpm install
+RUN npm install -g pnpm@11 \
+    && pnpm install --frozen-lockfile
 
 COPY . .
 
@@ -31,7 +31,7 @@ ENV PNPM_HOME="/root/.local/share/pnpm"
 ENV PATH="${PATH}:${PNPM_HOME}"
 ENV NODE_ENV=production
 
-RUN npm install -g pnpm@10
+RUN npm install -g pnpm@11
 
 WORKDIR /app
 
