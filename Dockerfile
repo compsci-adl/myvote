@@ -33,6 +33,7 @@ COPY --from=dependencies /app/package.json ./package.json
 COPY . .
 
 ENV NODE_ENV=production
+ENV CI=true
 ENV SKIP_ENV_VALIDATION=true
 
 # Disable Next.js's anonymous telemetry data about general usage
