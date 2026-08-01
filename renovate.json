@@ -1,0 +1,58 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "docker:pinDigests",
+    "helpers:pinGitHubActionDigests",
+    ":pinDevDependencies",
+    ":maintainLockFilesWeekly"
+  ],
+  "configMigration": true,
+  "automerge": true,
+  "automergeType": "pr",
+  "autoApprove": true,
+  "prConcurrentLimit": 1,
+  "prHourlyLimit": 0,
+  "separateMinorPatch": false,
+  "separateMultipleMajor": false,
+  "minimumReleaseAge": "3 days",
+  "packageRules": [
+    {
+      "matchDatasources": ["github-actions"],
+      "matchUpdateTypes": ["major"],
+      "groupName": "GitHub Actions major updates",
+      "groupSlug": "github-actions-major-updates"
+    },
+    {
+      "matchDatasources": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "enabled": false
+    },
+    {
+      "matchDatasources": ["npm"],
+      "matchUpdateTypes": ["security"],
+      "groupName": "npm security updates",
+      "groupSlug": "npm-security-updates"
+    },
+    {
+      "matchDatasources": ["npm"],
+      "matchUpdateTypes": ["major", "minor", "patch", "digest"],
+      "enabled": false
+    },
+    {
+      "matchDatasources": ["docker"],
+      "matchUpdateTypes": ["security"],
+      "groupName": "docker security updates",
+      "groupSlug": "docker-security-updates"
+    },
+    {
+      "matchDatasources": ["docker"],
+      "matchUpdateTypes": ["major", "minor", "patch", "digest"],
+      "enabled": false
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "enabled": true
+  },
+  "osvVulnerabilityAlerts": true
+}
