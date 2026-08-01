@@ -41,7 +41,7 @@
     "clsx": "^2.1.1",
     "drizzle-kit": "^0.31.10",
     "drizzle-orm": "^0.45.2",
-    "framer-motion": "^12.43.0",
+    "motion": "^12.43.0",
     "intl-messageformat": "^11.2.13",
     "ky": "^1.14.3",
     "next": "^16.2.12",
