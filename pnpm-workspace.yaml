@@ -16,3 +16,5 @@ minimumReleaseAgeExclude:
   - esbuild@0.25.0
   - postcss@8.5.10 || 8.5.12 || 8.5.18
   - sharp@0.35.0
+  # Renovate security update: next@16.3.3
+  - next@16.3.3
