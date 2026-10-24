@@ -12,7 +12,7 @@ import {
     Tabs,
 } from '@heroui/react';
 import clsx from 'clsx';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'motion/react';
 import { useState } from 'react';
 
 import { useHelpModal } from '../helpers/help-modal';

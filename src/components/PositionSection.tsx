@@ -19,7 +19,7 @@ import {
 } from '@dnd-kit/sortable';
 import { Card, CardBody } from '@heroui/react';
 import { clsx } from 'clsx';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import React, { memo } from 'react';
 
 import type { Candidate } from '../types/candidate';
