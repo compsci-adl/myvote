@@ -293,7 +293,7 @@ export default function ClosedNominations({ electionId, setSliderValue }: Closed
                     console.error('Create candidates failed:', err);
                     setStatus({ text: 'Failed to create candidates. Please try again.', type: 'error' });
                     return;
-                }       
+                }
             }
         }
 
