@@ -289,11 +289,9 @@ export default function ClosedNominations({ electionId, setSliderValue }: Closed
                     await fetcher.post.mutate('candidate-position-links', {
                         arg: { candidate_id: candidate.id, position_id: position.id },
                     });
-                } catch {
-                    setStatus({
-                        text: `Failed to link candidate ${nomination.name} to position ${roleName}.`,
-                        type: 'error',
-                    });
+                } catch (err) {
+                    console.error('Create candidates failed:', err);
+                    setStatus({ text: 'Failed to create candidates. Please try again.', type: 'error' });
                     return;
                 }
             }
