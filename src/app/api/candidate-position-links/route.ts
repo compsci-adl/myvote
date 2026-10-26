@@ -307,7 +307,8 @@ export async function POST(req: NextRequest) {
                 { status: 200 } 
             );
         }
-        
+
+        serverCache.clearPattern(/^candidate-position-links:/);
         return NextResponse.json(link, { status: 201 });
     } catch (error) {
         console.error('Candidate-position-links POST error:', error);
