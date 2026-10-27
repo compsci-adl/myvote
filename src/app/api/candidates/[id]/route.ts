@@ -3,8 +3,10 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { auth } from '@/auth';
 import { db } from '@/db/index';
-import { candidatePositionLinks, candidates, positions } from '@/db/schema';
+import { candidatePositionLinks, candidates, elections, positions } from '@/db/schema';
 import { serverCache } from '@/lib/server-cache';
+import { isAdmin } from '@/utils/is-admin';
+import { isMember } from '@/utils/is-member';
 
 const CHUNK_SIZE = 100;
 
@@ -18,6 +20,15 @@ export async function POST(req: NextRequest) {
     const session = await auth();
     if (!session?.user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (!isAdmin(session)) {
+        return NextResponse.json({ error: 'Admin privileges required.' }, { status: 403 });
+    }
+    if (!(await isMember(session.user.id))) {
+        return NextResponse.json(
+            { error: 'Paid CS Club membership required.' },
+            { status: 403 }
+        );
     }
 
     const election_id = new URL(req.url).pathname.split('/').filter(Boolean).pop();
@@ -33,6 +44,22 @@ export async function POST(req: NextRequest) {
     }
     if (!Array.isArray(body)) {
         return NextResponse.json({ error: 'Body must be an array of candidates' }, { status: 400 });
+    }
+
+    try {
+        const [election] = await db
+            .select({ status: elections.status })
+            .from(elections)
+            .where(eq(elections.id, election_id));
+        if (!election) {
+            return NextResponse.json({ error: 'Election not found' }, { status: 404 });
+        }
+        if (['Voting', 'VotingClosed', 'ResultsReleased'].includes(election.status)) {
+            return NextResponse.json({ error: 'Election is locked' }, { status: 409 });
+        }
+    } catch (err) {
+        console.error('Failed to validate election for candidate import:', err);
+        return NextResponse.json({ error: 'Failed to validate election' }, { status: 500 });
     }
 
     const byName = new Map<string, CandidateInput>();
@@ -77,22 +104,26 @@ export async function POST(req: NextRequest) {
         }
 
         const positionByRole = new Map<string, string>();
+        const positionProblems = new Set<string>();
         for (const candidate of rows) {
             for (const role of candidate.nominations) {
                 const matches = positionIdsByName.get(role.toLowerCase()) ?? [];
-                if (matches.length !== 1) {
-                    return NextResponse.json(
-                        {
-                            error:
-                                matches.length === 0
-                                    ? `Position "${role}" was not found for this election`
-                                    : `Position "${role}" is ambiguous for this election`,
-                        },
-                        { status: 400 }
-                    );
+                if (matches.length === 0) {
+                    positionProblems.add(`"${role}" not found`);
+                    continue;
+                }
+                if (matches.length > 1) {
+                    positionProblems.add(`"${role}" is ambiguous`);
+                    continue;
                 }
                 positionByRole.set(role.toLowerCase(), matches[0]);
             }
+        }
+        if (positionProblems.size > 0) {
+            return NextResponse.json(
+                { error: `Invalid positions: ${[...positionProblems].join('; ')}` },
+                { status: 400 }
+            );
         }
 
         const savedCandidates = await db.transaction(async (tx) => {

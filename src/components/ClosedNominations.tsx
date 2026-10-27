@@ -1,6 +1,7 @@
 'use client';
 
 import { Button, Input } from '@heroui/react';
+import { HTTPError } from 'ky';
 import Papa from 'papaparse';
 import { useEffect, useState } from 'react';
 import useSWRMutation from 'swr/mutation';
@@ -216,9 +217,24 @@ export default function ClosedNominations({ electionId, setSliderValue }: Closed
             createdCandidates = await fetcher.post.mutate(`candidates/${electionId}`, {
                 arg: candidatesWithNominations,
             });
-        } catch {
+        } catch (err) {
+            let message = 'Failed to create candidates. Please try again.';
+            if (err instanceof HTTPError) {
+                const errorBody: unknown = await err.response
+                    .clone()
+                    .json()
+                    .catch(() => null);
+                if (
+                    errorBody &&
+                    typeof errorBody === 'object' &&
+                    'error' in errorBody &&
+                    typeof errorBody.error === 'string'
+                ) {
+                    message = errorBody.error;
+                }
+            }
             setStatus({
-                text: 'Failed to create candidates. Please try again.',
+                text: message,
                 type: 'error',
             });
             return;

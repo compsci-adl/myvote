@@ -4,6 +4,8 @@ const mockTransaction_bulkImport = jest.fn();
 const mockTxInsert_bulkImport = jest.fn();
 const mockValues_bulkImport = jest.fn();
 const mockClearPattern_bulkImport = jest.fn();
+const mockIsAdmin_bulkImport = jest.fn();
+const mockIsMember_bulkImport = jest.fn();
 
 jest.mock('next/server', () => ({
     NextResponse: {
@@ -12,7 +14,7 @@ jest.mock('next/server', () => ({
 }));
 
 jest.mock('@/auth', () => ({
-    auth: async () => ({ user: { id: 'user-1' } }),
+    auth: async () => ({ user: { id: 'user-1' }, accessToken: 'token' }),
 }));
 
 jest.mock('@/db/index', () => ({
@@ -24,6 +26,14 @@ jest.mock('@/db/index', () => ({
         }),
         transaction: (...args: unknown[]) => mockTransaction_bulkImport(...args),
     },
+}));
+
+jest.mock('@/utils/is-admin', () => ({
+    isAdmin: (...args: unknown[]) => mockIsAdmin_bulkImport(...args),
+}));
+
+jest.mock('@/utils/is-member', () => ({
+    isMember: (...args: unknown[]) => mockIsMember_bulkImport(...args),
 }));
 
 jest.mock('@/lib/server-cache', () => ({
@@ -39,11 +49,15 @@ describe('bulk candidate import route', () => {
         mockTxInsert_bulkImport.mockReset();
         mockValues_bulkImport.mockReset();
         mockClearPattern_bulkImport.mockReset();
+        mockIsAdmin_bulkImport.mockReset().mockReturnValue(true);
+        mockIsMember_bulkImport.mockReset().mockResolvedValue(true);
 
-        mockPositionQuery_bulkImport.mockResolvedValue([
-            { id: 'position-1', name: 'President' },
-            { id: 'position-2', name: 'Secretary' },
-        ]);
+        mockPositionQuery_bulkImport
+            .mockResolvedValueOnce([{ status: 'NominationsClosed' }])
+            .mockResolvedValueOnce([
+                { id: 'position-1', name: 'President' },
+                { id: 'position-2', name: 'Secretary' },
+            ]);
         mockTransaction_bulkImport.mockImplementation(async (callback) =>
             callback({ insert: mockTxInsert_bulkImport })
         );
@@ -106,7 +120,10 @@ describe('bulk candidate import route', () => {
     });
 
     test('rejects nominations for positions outside the election', async () => {
-        mockPositionQuery_bulkImport.mockResolvedValue([]);
+        mockPositionQuery_bulkImport.mockReset();
+        mockPositionQuery_bulkImport
+            .mockResolvedValueOnce([{ status: 'NominationsClosed' }])
+            .mockResolvedValueOnce([]);
         const { POST } = await import('../[id]/route');
         const req = {
             url: 'http://localhost/api/candidates/election-1',
@@ -117,7 +134,65 @@ describe('bulk candidate import route', () => {
 
         expect(mockTransaction_bulkImport).not.toHaveBeenCalled();
         expect(mockJson_bulkImport).toHaveBeenCalledWith(
-            { error: 'Position "President" was not found for this election' },
+            { error: 'Invalid positions: "President" not found' },
+            { status: 400 }
+        );
+    });
+
+    test('requires an admin and active member', async () => {
+        mockIsAdmin_bulkImport.mockReturnValue(false);
+        const { POST } = await import('../[id]/route');
+        const req = {
+            url: 'http://localhost/api/candidates/election-1',
+            json: async () => [],
+        } as never;
+
+        await POST(req);
+
+        expect(mockIsMember_bulkImport).not.toHaveBeenCalled();
+        expect(mockJson_bulkImport).toHaveBeenCalledWith(
+            { error: 'Admin privileges required.' },
+            { status: 403 }
+        );
+    });
+
+    test('rejects imports after voting starts', async () => {
+        mockPositionQuery_bulkImport.mockReset();
+        mockPositionQuery_bulkImport.mockResolvedValueOnce([{ status: 'Voting' }]);
+        const { POST } = await import('../[id]/route');
+        const req = {
+            url: 'http://localhost/api/candidates/election-1',
+            json: async () => [],
+        } as never;
+
+        await POST(req);
+
+        expect(mockTransaction_bulkImport).not.toHaveBeenCalled();
+        expect(mockJson_bulkImport).toHaveBeenCalledWith(
+            { error: 'Election is locked' },
+            { status: 409 }
+        );
+    });
+
+    test('reports all distinct invalid positions in one response', async () => {
+        mockPositionQuery_bulkImport.mockReset();
+        mockPositionQuery_bulkImport
+            .mockResolvedValueOnce([{ status: 'NominationsClosed' }])
+            .mockResolvedValueOnce([{ id: 'position-1', name: 'President' }]);
+        const { POST } = await import('../[id]/route');
+        const req = {
+            url: 'http://localhost/api/candidates/election-1',
+            json: async () => [
+                { name: 'Candidate One', nominations: ['Treasurer', 'Secretary'] },
+                { name: 'Candidate Two', nominations: ['Treasurer'] },
+            ],
+        } as never;
+
+        await POST(req);
+
+        expect(mockTransaction_bulkImport).not.toHaveBeenCalled();
+        expect(mockJson_bulkImport).toHaveBeenCalledWith(
+            { error: 'Invalid positions: "Treasurer" not found; "Secretary" not found' },
             { status: 400 }
         );
     });
