@@ -1,17 +1,12 @@
 'use client';
 
 import { Button, Input } from '@heroui/react';
+import { HTTPError } from 'ky';
 import Papa from 'papaparse';
 import { useEffect, useState } from 'react';
 import useSWRMutation from 'swr/mutation';
 
 import { fetcher } from '../lib/fetcher';
-import { usePositions } from './usePositions';
-
-interface Position {
-    id: string;
-    name: string;
-}
 
 interface ClosedNominationsProps {
     electionId: string;
@@ -191,7 +186,6 @@ export default function ClosedNominations({ electionId, setSliderValue }: Closed
         }
     );
 
-    const { data: positionsData } = usePositions(electionId);
     const handleContinue = async () => {
         setStatus({ text: '', type: '' });
         // Client-side validation: ensure every candidate has at least one nomination
@@ -223,9 +217,24 @@ export default function ClosedNominations({ electionId, setSliderValue }: Closed
             createdCandidates = await fetcher.post.mutate(`candidates/${electionId}`, {
                 arg: candidatesWithNominations,
             });
-        } catch {
+        } catch (err) {
+            let message = 'Failed to create candidates. Please try again.';
+            if (err instanceof HTTPError) {
+                const errorBody: unknown = await err.response
+                    .clone()
+                    .json()
+                    .catch(() => null);
+                if (
+                    errorBody &&
+                    typeof errorBody === 'object' &&
+                    'error' in errorBody &&
+                    typeof errorBody.error === 'string'
+                ) {
+                    message = errorBody.error;
+                }
+            }
             setStatus({
-                text: 'Failed to create candidates. Please try again.',
+                text: message,
                 type: 'error',
             });
             return;
@@ -242,62 +251,7 @@ export default function ClosedNominations({ electionId, setSliderValue }: Closed
             return;
         }
 
-        // Fetch positions for this election
-        // positionsData is expected to be { positions: Position[] } or just Position[]
-        let positions: Position[] = [];
-        if (Array.isArray(positionsData)) {
-            positions = positionsData as Position[];
-        } else if (
-            positionsData &&
-            typeof positionsData === 'object' &&
-            'positions' in positionsData &&
-            Array.isArray((positionsData as { positions: unknown }).positions)
-        ) {
-            positions = (positionsData as { positions: Position[] }).positions;
-        }
-        if (!positions.length) {
-            setStatus({
-                text: 'No positions found for this election.',
-                type: 'error',
-            });
-            return;
-        }
-
-        // For each candidate, create candidate-position-links for each nominated role
-        for (let i = 0; i < createdCandidates.length; i++) {
-            const candidate = createdCandidates[i];
-            const nomination = candidatesWithNominations[i];
-            if (!candidate || !candidate.id) {
-                setStatus({
-                    text: `Candidate ID missing for ${nomination.name}.`,
-                    type: 'error',
-                });
-                return;
-            }
-            for (const roleName of nomination.nominations) {
-                const position = positions.find(
-                    (p) => p.name.trim().toLowerCase() === roleName.trim().toLowerCase()
-                );
-                if (!position) {
-                    setStatus({
-                        text: `Position "${roleName}" not found for candidate ${nomination.name}.`,
-                        type: 'error',
-                    });
-                    return;
-                }
-                try {
-                    await fetcher.post.mutate('candidate-position-links', {
-                        arg: { candidate_id: candidate.id, position_id: position.id },
-                    });
-                } catch (err) {
-                    console.error('Create candidates failed:', err);
-                    setStatus({ text: 'Failed to create candidates. Please try again.', type: 'error' });
-                    return;
-                }
-            }
-        }
-
-        // Only update election status after all validation and candidate creation logic
+        // The bulk endpoint writes candidates and all of their position links together.
         updateElectionStatus.trigger();
     };
 
