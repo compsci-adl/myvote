@@ -1,473 +1,289 @@
 import { eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 
 import { auth } from '@/auth';
 import { db } from '@/db/index';
-import { ballots, candidatePositionLinks, candidates, positions } from '@/db/schema';
+import {
+    ballots,
+    candidatePositionLinks,
+    candidates,
+    positions,
+} from '@/db/schema';
+import type { PositionResult } from '@/types/position-result';
 import { hareclarkWithTallies } from '@/utils/hareclark';
+import { compareResultPositions } from '@/utils/position-order';
 
-interface ResultCandidate {
-    id: string;
-    name: string;
-    ranking: number;
-    total_points: number;
-    borda_points: number;
-    excluded: boolean;
+const confirmationSchema = z.object({
+    confirmedPositions: z.array(z.string()),
+    manualOverrides: z.record(z.string(), z.array(z.string())),
+});
+type Confirmation = z.infer<typeof confirmationSchema>;
+
+class InvalidConfirmation extends Error {}
+
+function parseConfirmation(body: unknown): Confirmation {
+    const parsed = confirmationSchema.safeParse(body);
+    if (!parsed.success) {
+        throw new InvalidConfirmation(
+            'Expected confirmedPositions and manualOverrides.',
+        );
+    }
+    const { confirmedPositions } = parsed.data;
+    if (new Set(confirmedPositions).size !== confirmedPositions.length) {
+        throw new InvalidConfirmation('Duplicate confirmed position IDs.');
+    }
+    const manualOverrides: Record<string, string[]> = Object.create(null);
+    for (const [positionId, selection] of Object.entries(
+        parsed.data.manualOverrides,
+    )) {
+        if (
+            !confirmedPositions.includes(positionId) ||
+            new Set(selection).size !== selection.length
+        ) {
+            throw new InvalidConfirmation(
+                'Invalid manual override for a confirmed position.',
+            );
+        }
+        manualOverrides[positionId] = selection;
+    }
+    return { confirmedPositions, manualOverrides };
 }
-interface ResultPosition {
-    position_id: string;
-    position_name: string;
-    winners: ResultCandidate[];
-    candidates: ResultCandidate[];
-    vacancies: number;
-}
 
-export async function GET(req: NextRequest) {
-    // Expect /api/results/[id] where id is the election_id
-
+async function authorize() {
     const session = await auth();
     if (!session?.user || !session.accessToken) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     let isAdmin = false;
     try {
-        const decodedToken = JSON.parse(atob(session.accessToken.split('.')[1]));
-        isAdmin = decodedToken?.realm_access?.roles?.includes('myvote-admin');
+        const decodedToken = JSON.parse(
+            atob(session.accessToken.split('.')[1]),
+        );
+        isAdmin =
+            decodedToken?.realm_access?.roles?.includes('myvote-admin') ===
+            true;
     } catch {
         isAdmin = false;
     }
-    if (!isAdmin) {
-        return NextResponse.json({ error: 'Admin privileges required.' }, { status: 403 });
+    return isAdmin
+        ? null
+        : NextResponse.json(
+              { error: 'Admin privileges required.' },
+              { status: 403 },
+          );
+}
+
+async function calculateResults(
+    electionId: string,
+    confirmation: Confirmation,
+) {
+    const [allPositions, allCandidates, allLinks, ballotRows] =
+        await Promise.all([
+            db
+                .select()
+                .from(positions)
+                .where(eq(positions.election, electionId)),
+            db
+                .select()
+                .from(candidates)
+                .where(eq(candidates.election, electionId)),
+            db.select().from(candidatePositionLinks),
+            db
+                .select({ ballot: ballots, position: positions })
+                .from(ballots)
+                .innerJoin(positions, eq(ballots.position, positions.id))
+                .where(eq(positions.election, electionId)),
+        ]);
+    const orderedPositions = allPositions
+        .map((position) => ({
+            position_id: position.id,
+            position_name: position.name,
+            executive: position.executive,
+            vacancies: position.vacancies,
+        }))
+        .sort(compareResultPositions);
+    const { confirmedPositions, manualOverrides } = confirmation;
+    if (
+        confirmedPositions.some(
+            (id, index) => orderedPositions[index]?.position_id !== id,
+        )
+    ) {
+        throw new InvalidConfirmation(
+            'Confirmed positions must be an ordered prefix of the results.',
+        );
     }
-    const { pathname } = new URL(req.url);
-    // pathname: /api/results/[id]
-    const match = pathname.match(/\/api\/results\/(.+)$/);
-    const election_id = match ? match[1] : null;
-    if (!election_id) {
-        return NextResponse.json({ error: 'Missing election_id' }, { status: 400 });
-    }
 
-    // Get all ballots for this election, joined with positions
-    const data = await db
-        .select({
-            ballot: ballots,
-            position: positions,
-        })
-        .from(ballots)
-        .innerJoin(positions, eq(ballots.position, positions.id))
-        .where(eq(positions.election, election_id));
-
-    // Get all candidates for this election
-    const allCandidates = await db
-        .select()
-        .from(candidates)
-        .where(eq(candidates.election, election_id));
-
-    // Get all candidate-position links for this election
-    const allLinks = await db.select().from(candidatePositionLinks);
-
-    // Group ballots by position
-    const grouped: Record<
-        string,
-        ResultPosition & { vacancies: number; ballots: string[][]; candidateIds: string[] }
-    > = {};
-    for (const row of data) {
-        const posId = row.position.id as string;
-        if (!grouped[posId]) {
-            // Only include candidates who have nominated for this position
-            const posCandidateIds = allLinks
-                .filter((link) => link.position_id === posId)
-                .map((link) => link.candidate_id);
-            const posCandidates = allCandidates.filter((cand) => posCandidateIds.includes(cand.id));
-            grouped[posId] = {
-                position_id: posId,
-                position_name: row.position.name,
-                winners: [],
-                candidates: [],
-                vacancies: row.position.vacancies,
-                ballots: [],
-                candidateIds: posCandidates.map((c) => c.id),
-            };
+    const candidatesById = new Map(
+        allCandidates.map((candidate) => [candidate.id, candidate]),
+    );
+    const nomineesByPosition = new Map<string, Set<string>>();
+    for (const link of allLinks) {
+        if (!candidatesById.has(link.candidate_id)) continue;
+        let nominees = nomineesByPosition.get(link.position_id);
+        if (!nominees) {
+            nominees = new Set();
+            nomineesByPosition.set(link.position_id, nominees);
         }
-        // Parse preferences (array of candidate ids)
-        const preferences: string[] = Array.isArray(row.ballot.preferences)
-            ? row.ballot.preferences
+        nominees.add(link.candidate_id);
+    }
+    const ballotsByPosition = new Map<string, string[][]>();
+    for (const { ballot } of ballotRows) {
+        const nominees = nomineesByPosition.get(ballot.position);
+        const preferences = Array.isArray(ballot.preferences)
+            ? ballot.preferences.filter(
+                  (id): id is string =>
+                      typeof id === 'string' && nominees?.has(id) === true,
+              )
             : [];
-        grouped[posId].ballots.push(preferences);
+        let positionBallots = ballotsByPosition.get(ballot.position);
+        if (!positionBallots) {
+            positionBallots = [];
+            ballotsByPosition.set(ballot.position, positionBallots);
+        }
+        positionBallots.push(preferences);
     }
 
-    // For each position, run Hare-Clarke STV
-    for (const pos of Object.values(grouped)) {
-        // Only include candidates who are actually running for this position
-        const posCandidates = allCandidates.filter((cand) => pos.candidateIds.includes(cand.id));
-        // If no candidates, skip
-        if (posCandidates.length === 0) {
-            pos.winners = [];
-            pos.candidates = [];
-            continue;
+    const confirmedWinners = new Set<string>();
+    const results: PositionResult[] = [];
+    for (const [index, position] of orderedPositions.entries()) {
+        const nominees =
+            nomineesByPosition.get(position.position_id) ?? new Set<string>();
+        const positionCandidates = [...nominees]
+            .sort((a, b) => a.localeCompare(b))
+            .map((id) => candidatesById.get(id)!);
+        const originalBallots =
+            ballotsByPosition.get(position.position_id) ?? [];
+        // Each replay starts with original preferences. Hare-Clark reverses its input arrays.
+        const eligibleBallots = originalBallots
+            .map((ballot) => ballot.filter((id) => !confirmedWinners.has(id)))
+            .filter((ballot) => ballot.length > 0);
+        const supportedIds = new Set(eligibleBallots.flat());
+        const eligibleIds = positionCandidates
+            .filter((candidate) => supportedIds.has(candidate.id))
+            .map((candidate) => candidate.id);
+        const { elected, tallies } =
+            position.vacancies > 0 && eligibleIds.length > 0
+                ? hareclarkWithTallies(
+                      eligibleIds,
+                      eligibleBallots,
+                      position.vacancies,
+                  )
+                : { elected: [], tallies: {} as Record<string, number> };
+        const manual = Object.prototype.hasOwnProperty.call(
+            manualOverrides,
+            position.position_id,
+        )
+            ? manualOverrides[position.position_id]
+            : undefined;
+        if (
+            manual !== undefined &&
+            (manual.length > position.vacancies ||
+                manual.some(
+                    (id) => !nominees.has(id) || confirmedWinners.has(id),
+                ))
+        ) {
+            throw new InvalidConfirmation(
+                `Invalid manual winners for ${position.position_name}.`,
+            );
         }
-        // If no ballots, elect no one
-        if (pos.ballots.length === 0) {
-            // Elect top vacancies candidates as winners
-            const elected = posCandidates.slice(0, pos.vacancies);
-            pos.winners = elected.map((cand, idx) => ({
-                id: cand.id,
-                name: cand.name,
-                ranking: idx + 1,
-                total_points: 0,
-                borda_points: 0,
-                excluded: false,
-            }));
-            pos.candidates = posCandidates.map((cand, idx) => ({
-                id: cand.id,
-                name: cand.name,
-                ranking: idx + 1,
-                total_points: 0,
-                borda_points: 0,
-                excluded: false,
-            }));
-            continue;
+        // An explicit empty override leaves the office vacant; an absent one uses Hare-Clark.
+        const winnerIds = manual ?? elected;
+        const isConfirmed = index < confirmedPositions.length;
+        if (isConfirmed && winnerIds.length > position.vacancies) {
+            throw new InvalidConfirmation(
+                `Resolve the tied winners for ${position.position_name} before confirming.`,
+            );
         }
-        // Always use hareclarkWithTallies with string IDs and ballots
-        const candidateIds = posCandidates.map((c) => String(c.id));
-        const ballots = pos.ballots.map((ballot) => ballot.map((cid) => String(cid)));
-        const { elected, tallies } = hareclarkWithTallies(candidateIds, ballots, pos.vacancies);
-        // Compute Borda scores
-        const bordaScores: Record<string, number> = {};
-        for (const ballot of pos.ballots) {
-            for (let i = 0; i < ballot.length; i++) {
-                const cid = ballot[i];
-                bordaScores[cid] = (bordaScores[cid] || 0) + (ballot.length - i);
+        const winnerOrder = new Map(winnerIds.map((id, rank) => [id, rank]));
+        const bordaScores = new Map<string, number>();
+        for (const ballot of originalBallots) {
+            for (const [rank, id] of ballot.entries()) {
+                bordaScores.set(
+                    id,
+                    (bordaScores.get(id) ?? 0) + ballot.length - rank,
+                );
             }
         }
-        // Winners first, then non-winners by Hare-Clark tallies desc, then name
-        const winnerSet = new Set(elected.map((cid: string) => String(cid)));
-        const sortedCandidates = [
-            ...posCandidates
-                .filter((c) => winnerSet.has(String(c.id)))
-                .sort((a, b) => {
-                    // Sort by winner order
-                    return elected.indexOf(String(a.id)) - elected.indexOf(String(b.id));
-                }),
-            ...posCandidates
-                .filter((c) => !winnerSet.has(String(c.id)))
-                .sort((a, b) => {
-                    // Sort by Hare-Clark tallies desc, then Borda desc, then name
-                    const hcDiff = (tallies[b.id] ?? 0) - (tallies[a.id] ?? 0);
-                    if (hcDiff !== 0) return hcDiff;
-                    const bordaDiff = (bordaScores[b.id] ?? 0) - (bordaScores[a.id] ?? 0);
-                    if (bordaDiff !== 0) return bordaDiff;
-                    return a.name.localeCompare(b.name);
-                }),
-        ];
-        pos.candidates = sortedCandidates.map((cand, idx: number) => ({
-            id: String(cand.id),
-            name: cand.name,
-            ranking: idx + 1,
-            total_points: tallies[cand.id] ?? 0,
-            borda_points: bordaScores[cand.id] || 0,
-            excluded: false,
+        positionCandidates.sort((a, b) => {
+            const aWinner = winnerOrder.get(a.id);
+            const bWinner = winnerOrder.get(b.id);
+            if (aWinner !== undefined || bWinner !== undefined) {
+                return (aWinner ?? Infinity) - (bWinner ?? Infinity);
+            }
+            return (
+                Number(confirmedWinners.has(a.id)) -
+                    Number(confirmedWinners.has(b.id)) ||
+                (tallies[b.id] ?? 0) - (tallies[a.id] ?? 0) ||
+                (bordaScores.get(b.id) ?? 0) - (bordaScores.get(a.id) ?? 0) ||
+                a.name.localeCompare(b.name) ||
+                a.id.localeCompare(b.id)
+            );
+        });
+        const resultCandidates = positionCandidates.map((candidate, rank) => ({
+            id: candidate.id,
+            name: candidate.name,
+            ranking: rank + 1,
+            total_points: tallies[candidate.id] ?? 0,
+            borda_points: bordaScores.get(candidate.id) ?? 0,
+            excluded: confirmedWinners.has(candidate.id),
         }));
-        let numWinners = Math.min(pos.vacancies, elected.length);
-        if (numWinners < pos.vacancies) {
-            const remaining = sortedCandidates
-                .slice(numWinners)
-                .filter((c) => !winnerSet.has(String(c.id)));
-            numWinners += Math.min(remaining.length, pos.vacancies - numWinners);
+        results.push({
+            ...position,
+            candidates: resultCandidates,
+            winners: resultCandidates.filter((candidate) =>
+                winnerOrder.has(candidate.id),
+            ),
+        });
+        // Provisional officeholders never disqualify nominees in subsequent offices.
+        if (isConfirmed) {
+            for (const id of winnerIds) confirmedWinners.add(id);
         }
-        pos.winners = sortedCandidates.slice(0, numWinners).map((cand, idx) => ({
-            id: String(cand.id),
-            name: cand.name,
-            ranking: idx + 1,
-            total_points: tallies[cand.id] ?? 0,
-            borda_points: bordaScores[cand.id] || 0,
-            excluded: false,
-        }));
-        // Attach Hare-Clark tallies for debug
-        // @ts-expect-error: attach for debug only
-        pos.hareclarkTallies = tallies;
     }
+    return results;
+}
 
-    // Remove ballots, candidateIds from output
-    const results: ResultPosition[] = Object.values(grouped).map(
-         
-        ({ ballots, candidateIds, ...rest }) => rest
+async function respond(req: NextRequest, confirm: boolean) {
+    const unauthorized = await authorize();
+    if (unauthorized) return unauthorized;
+
+    const match = new URL(req.url).pathname.match(
+        /\/api\/results\/([^/]+)\/?$/,
     );
-    return NextResponse.json({ results }, { status: 200 });
+    if (!match) {
+        return NextResponse.json(
+            { error: 'Missing election_id' },
+            { status: 400 },
+        );
+    }
+    try {
+        let confirmation: Confirmation = {
+            confirmedPositions: [],
+            manualOverrides: {},
+        };
+        if (confirm) {
+            let body: unknown;
+            try {
+                body = await req.json();
+            } catch {
+                throw new InvalidConfirmation('Invalid JSON body.');
+            }
+            confirmation = parseConfirmation(body);
+        }
+        const results = await calculateResults(match[1], confirmation);
+        return NextResponse.json({ results }, { status: 200 });
+    } catch (error) {
+        if (error instanceof InvalidConfirmation) {
+            return NextResponse.json({ error: error.message }, { status: 400 });
+        }
+        throw error;
+    }
+}
+
+export async function GET(req: NextRequest) {
+    return respond(req, false);
 }
 
 export async function POST(req: NextRequest) {
-    // Accept exclusions in the body: { exclusions: { [position_id]: string[] } }
-    const { pathname } = new URL(req.url);
-    const match = pathname.match(/\/api\/results\/(.+)$/);
-    const election_id = match ? match[1] : null;
-    if (!election_id) {
-        return NextResponse.json({ error: 'Missing election_id' }, { status: 400 });
-    }
-    const body = await req.json();
-    const exclusions: Record<string, string[]> = body.exclusions || {};
-    const manualOverrides: Record<string, string[]> = body.manualOverrides || {};
-
-    // Get all ballots for this election, joined with positions
-    const data = await db
-        .select({
-            ballot: ballots,
-            position: positions,
-        })
-        .from(ballots)
-        .innerJoin(positions, eq(ballots.position, positions.id))
-        .where(eq(positions.election, election_id));
-
-    // Get all candidates for this election
-    const allCandidates = await db
-        .select()
-        .from(candidates)
-        .where(eq(candidates.election, election_id));
-
-    // Get all candidate-position links for this election
-    const allLinks = await db.select().from(candidatePositionLinks);
-
-    // Group ballots by position
-    const grouped: Record<
-        string,
-        ResultPosition & { vacancies: number; ballots: string[][]; candidateIds: string[] }
-    > = {};
-    for (const row of data) {
-        const posId = row.position.id as string;
-        if (!grouped[posId]) {
-            // Only include candidates who have nominated for this position
-            const posCandidateIds = allLinks
-                .filter((link) => link.position_id === posId)
-                .map((link) => link.candidate_id);
-            const posCandidates = allCandidates.filter((cand) => posCandidateIds.includes(cand.id));
-            grouped[posId] = {
-                position_id: posId,
-                position_name: row.position.name,
-                winners: [],
-                candidates: [],
-                vacancies: row.position.vacancies,
-                ballots: [],
-                candidateIds: posCandidates.map((c) => c.id),
-            };
-        }
-        // Parse preferences (array of candidate ids)
-        const preferences: string[] = Array.isArray(row.ballot.preferences)
-            ? row.ballot.preferences
-            : [];
-        grouped[posId].ballots.push(preferences);
-    }
-
-    // Helper to run Hare-Clark for all positions with current exclusions
-    function runAllHareClark(
-        groupedObj: typeof grouped,
-        exclusionsObj: Record<string, string[]>,
-        manualOverridesObj: Record<string, string[]>
-    ) {
-        for (const pos of Object.values(groupedObj)) {
-            const posCandidates = allCandidates.filter((cand) =>
-                pos.candidateIds.includes(cand.id)
-            );
-            const excluded = exclusionsObj[pos.position_id] || [];
-            const posCandidatesFiltered = posCandidates.filter((c) => !excluded.includes(c.id));
-            // Compute bordaScores from all ballots
-            const bordaScores: Record<string, number> = {};
-            for (const ballot of pos.ballots) {
-                for (let i = 0; i < ballot.length; i++) {
-                    const cid = ballot[i];
-                    bordaScores[cid] = (bordaScores[cid] || 0) + (ballot.length - i);
-                }
-            }
-            if (posCandidatesFiltered.length === 0) {
-                pos.winners = [];
-                pos.candidates = posCandidates.map((c) => ({
-                    id: c.id,
-                    name: c.name,
-                    ranking: 0,
-                    total_points: 0,
-                    borda_points: bordaScores[c.id] || 0,
-                    excluded: excluded.includes(c.id),
-                }));
-                continue;
-            }
-            const manual = manualOverridesObj[pos.position_id];
-            if (manual && manual.length > 0) {
-                // Manual override: still compute points, but set winners manually
-                if (pos.ballots.length === 0) {
-                    // No points
-                    const winnerCands = manual
-                        .map((id) => posCandidates.find((c) => c.id === id))
-                        .filter(Boolean) as typeof posCandidates;
-                    pos.winners = winnerCands.map((cand, idx) => ({
-                        id: cand.id,
-                        name: cand.name,
-                        ranking: idx + 1,
-                        total_points: 0,
-                        borda_points: bordaScores[cand.id] || 0,
-                        excluded: false,
-                    }));
-                    const sortedCandidates = [
-                        ...winnerCands,
-                        ...posCandidates
-                            .filter((c) => !manual.includes(c.id))
-                            .sort((a, b) => a.name.localeCompare(b.name)),
-                    ];
-                    pos.candidates = sortedCandidates.map((cand, idx: number) => ({
-                        id: cand.id,
-                        name: cand.name,
-                        ranking: idx + 1,
-                        total_points: 0,
-                        borda_points: bordaScores[cand.id] || 0,
-                        excluded: false,
-                    }));
-                    continue;
-                }
-                const candidateIds = posCandidates.map((c) => String(c.id));
-                const ballots = pos.ballots.map((ballot) =>
-                    ballot.filter((cid) => !excluded.includes(cid)).map((cid) => String(cid))
-                );
-                const { tallies } = hareclarkWithTallies(candidateIds, ballots, pos.vacancies);
-                // Manual winners
-                const winnerCands = manual
-                    .map((id) => posCandidates.find((c) => c.id === id))
-                    .filter(Boolean) as typeof posCandidates;
-                pos.winners = winnerCands.map((cand, idx) => ({
-                    id: cand.id,
-                    name: cand.name,
-                    ranking: idx + 1,
-                    total_points: tallies[cand.id] ?? 0,
-                    borda_points: bordaScores[cand.id] || 0,
-                    excluded: false,
-                }));
-                const sortedCandidates = [
-                    ...winnerCands,
-                    ...posCandidates
-                        .filter((c) => !manual.includes(c.id))
-                        .sort((a, b) => {
-                            // Sort by Hare-Clark tallies desc, then Borda desc, then name
-                            const hcDiff = (tallies[b.id] ?? 0) - (tallies[a.id] ?? 0);
-                            if (hcDiff !== 0) return hcDiff;
-                            const bordaDiff = (bordaScores[b.id] ?? 0) - (bordaScores[a.id] ?? 0);
-                            if (bordaDiff !== 0) return bordaDiff;
-                            return a.name.localeCompare(b.name);
-                        }),
-                ];
-                pos.candidates = sortedCandidates.map((cand, idx: number) => ({
-                    id: String(cand.id),
-                    name: cand.name,
-                    ranking: idx + 1,
-                    total_points: tallies[cand.id] ?? 0,
-                    borda_points: bordaScores[cand.id] || 0,
-                    excluded: false,
-                }));
-                // @ts-expect-error: attach for debug only
-                pos.hareclarkTallies = tallies;
-                continue;
-            }
-            if (pos.ballots.length === 0) {
-                // Elect top vacancies candidates as winners
-                const elected = posCandidatesFiltered.slice(0, pos.vacancies);
-                pos.winners = elected.map((cand, idx) => ({
-                    id: cand.id,
-                    name: cand.name,
-                    ranking: idx + 1,
-                    total_points: 0,
-                    borda_points: bordaScores[cand.id] || 0,
-                    excluded: false,
-                }));
-                pos.candidates = posCandidates.map((c, idx) => ({
-                    id: c.id,
-                    name: c.name,
-                    ranking: idx + 1,
-                    total_points: 0,
-                    borda_points: bordaScores[c.id] || 0,
-                    excluded: excluded.includes(c.id),
-                }));
-                continue;
-            }
-            const candidateIds = posCandidatesFiltered.map((c) => String(c.id));
-            const ballots = pos.ballots.map((ballot) =>
-                ballot.filter((cid) => !excluded.includes(cid)).map((cid) => String(cid))
-            );
-            const { elected, tallies } = hareclarkWithTallies(candidateIds, ballots, pos.vacancies);
-            const winnerSet = new Set(elected.map((cid: string) => String(cid)));
-            const sortedCandidates = [
-                ...posCandidates
-                    .filter((c) => winnerSet.has(String(c.id)))
-                    .sort((a, b) => {
-                        return elected.indexOf(String(a.id)) - elected.indexOf(String(b.id));
-                    }),
-                ...posCandidates
-                    .filter((c) => !winnerSet.has(String(c.id)))
-                    .sort((a, b) => {
-                        // Sort by Hare-Clark tallies desc, then Borda desc, then name
-                        const hcDiff = (tallies[b.id] ?? 0) - (tallies[a.id] ?? 0);
-                        if (hcDiff !== 0) return hcDiff;
-                        const bordaDiff = (bordaScores[b.id] ?? 0) - (bordaScores[a.id] ?? 0);
-                        if (bordaDiff !== 0) return bordaDiff;
-                        return a.name.localeCompare(b.name);
-                    }),
-            ];
-            pos.candidates = sortedCandidates.map((cand, idx: number) => ({
-                id: String(cand.id),
-                name: cand.name,
-                ranking: idx + 1,
-                total_points: tallies[cand.id] ?? 0,
-                borda_points: bordaScores[cand.id] || 0,
-                excluded: false,
-            }));
-            let numWinners = Math.min(pos.vacancies, elected.length);
-            if (numWinners < pos.vacancies) {
-                const remaining = sortedCandidates
-                    .slice(numWinners)
-                    .filter((c) => !winnerSet.has(String(c.id)));
-                numWinners += Math.min(remaining.length, pos.vacancies - numWinners);
-            }
-            pos.winners = sortedCandidates.slice(0, numWinners).map((cand, idx) => ({
-                id: String(cand.id),
-                name: cand.name,
-                ranking: idx + 1,
-                total_points: tallies[cand.id] ?? 0,
-                borda_points: bordaScores[cand.id] || 0,
-                excluded: false,
-            }));
-            // @ts-expect-error: attach for debug only
-            pos.hareclarkTallies = tallies;
-        }
-    }
-
-    // Iteratively enforce that no candidate is a winner in more than one position
-    let changed = true;
-    let maxLoops = 10; // prevent infinite loop
-    while (changed && maxLoops-- > 0) {
-        runAllHareClark(grouped, exclusions, manualOverrides);
-        // Find candidates who are winners in multiple positions
-        const winnerMap: Record<string, string[]> = {};
-        for (const pos of Object.values(grouped)) {
-            for (const winner of pos.winners) {
-                if (!winnerMap[winner.id]) winnerMap[winner.id] = [];
-                winnerMap[winner.id].push(pos.position_id);
-            }
-        }
-        // Find any candidate who is a winner in more than one position
-        const multiWinners = Object.entries(winnerMap).filter(([, posIds]) => posIds.length > 1);
-        if (multiWinners.length === 0) {
-            changed = false;
-            break;
-        }
-        // For each such candidate, keep them only in the first position, exclude from others
-        for (const [candId, posIds] of multiWinners) {
-            // Keep in the first position, exclude from the rest
-            for (let i = 1; i < posIds.length; ++i) {
-                if (!exclusions[posIds[i]]) exclusions[posIds[i]] = [];
-                if (!exclusions[posIds[i]].includes(candId)) exclusions[posIds[i]].push(candId);
-            }
-        }
-    }
-
-    // Remove ballots, candidateIds from output
-    const results: ResultPosition[] = Object.values(grouped).map(
-         
-        ({ ballots, candidateIds, ...rest }) => rest
-    );
-    return NextResponse.json({ results }, { status: 200 });
+    return respond(req, true);
 }
